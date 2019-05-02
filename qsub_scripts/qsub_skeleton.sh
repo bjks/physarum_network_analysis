@@ -9,4 +9,4 @@
 #$ -V
 #$ -o /data.bpm/bksche/std_out
 #$ -e /data.bpm/bksche/std_err
-python3 /data.bpm/bksche/skeleton.py ${NAME} ${NO}
+python3 /data.bpm/bksche/network_analysis/skeleton.py ${NAME} ${NO}

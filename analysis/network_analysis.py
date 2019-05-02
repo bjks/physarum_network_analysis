@@ -278,9 +278,9 @@ def inter_mean(dye, skeleton, mask, local_radii):
     concentration_outer = np.true_divide(intensity_outer, no_outer,
                                          out=np.zeros_like(dye), where=intensity_outer!=0)
 
-    concentration         = disk_filter(concentration, concentration, 10)
-    concentration_inner   = disk_filter(concentration_inner, concentration, 10)
-    concentration_inner   = disk_filter(concentration_outer, concentration, 10)
+    concentration         = disk_filter(concentration, concentration, 10) * skeleton
+    concentration_inner   = disk_filter(concentration_inner, concentration, 10) * skeleton
+    concentration_inner   = disk_filter(concentration_outer, concentration, 10) * skeleton
 
 
     return concentration, concentration_inner, concentration_outer

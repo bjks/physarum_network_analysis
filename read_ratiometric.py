@@ -22,7 +22,7 @@ def main():
     sample_step = int(os.sys.argv[2])
     method = 'inter_mean'
     order = 'gt'
-    data_sets = [data(set_keyword, i, method, order) for i in np.arange(data(set_keyword).first, data(set_keyword).last, sample_step)]
+    data_sets = [data(set_keyword, i, method, order) for i in np.arange( int(os.sys.argv[2]),int(os.sys.argv[3]), sample_step )]
     # data_sets = [data(set_keyword, i, method, order) for i in np.arange(2,3)]
 
     plot_samples(data_sets, True)

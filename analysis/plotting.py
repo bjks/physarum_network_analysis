@@ -9,25 +9,42 @@ def processing_visualization(file_dat, file_plot, show=False):
     fig, axes = plt.subplots(2,3, figsize=(6, 6), sharex=True, sharey=True)
     ax = axes.ravel()
     green           = data['green_clean']
-    green_spotless  = data['green_spotless']
+    green = np.ma.masked_where(green == 0, green)
+
+    # green_spotless  = data['green_spotless']
+    # green = np.ma.masked_where(green == 0, green)
+    #
     texas           = data['texas_clean']
+    texas = np.ma.masked_where(texas == 0, texas)
+
     ratio           = data['ratio']
-
-    max = np.amax([green, green_spotless])
-    min = np.amin([green, green_spotless])
+    ratio = np.ma.masked_where(ratio == 0, ratio)
 
 
-    ax[0].imshow(green, cmap='Greens', vmin = min, vmax = max)
+    # max = np.amax([green, green_spotless])
+    # min = np.amin([green, green_spotless])
+
+
+    ax[0].imshow(green, cmap='Greens') #, vmin = min, vmax = max)
     ax[0].set_title('green channel')
 
-    ax[1].imshow(green_spotless, cmap='Greens', vmin = min, vmax = max)
-    ax[1].set_title('green without spots')
+    ax[1].imshow(texas, cmap='Reds')
+    ax[1].set_title('red channel')
 
-    ax[2].imshow(texas, cmap='Reds')
-    ax[2].set_title('red channel')
+    ax[2].imshow(ratio)
+    ax[2].set_title('green/red')
 
-    ax[3].imshow(ratio, cmap='Purples')
-    ax[3].set_title('green/red')
+    # ax[1].imshow(green_spotless, cmap='Greens', vmin = min, vmax = max)
+    # ax[1].set_title('green without spots')
+    #
+    # ax[2].imshow(texas, cmap='Reds')
+    # ax[2].set_title('red channel')
+    #
+    # ax[3].imshow(ratio, cmap='Purples')
+    # ax[3].set_title('green/red')
+
+    ax[3].imshow(thick_skeleton(data['skeleton']))
+    ax[3].set_title('skeleton')
 
     ax[4].imshow(thick_skeleton(data['local_radii']))
     ax[4].set_title('tube radius')
