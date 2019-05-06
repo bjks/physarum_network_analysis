@@ -107,6 +107,10 @@ def phase_corr(kymo1, kymo2,
         squared_kymo2 /=norm_with_model(squared_kymo1, 20)
         squared_kymo1 = detrend(squared_kymo1, 40)
         squared_kymo2 = detrend(squared_kymo2, 40)
+    elif detrending == 'radius':
+        squared_kymo2/= squared_kymo1
+        squared_kymo1 = detrend(squared_kymo1, 40)
+        squared_kymo2 = detrend(squared_kymo2, 40)
 
 
     squared_kymo1 = ndi.zoom(squared_kymo1, upsample, order=2)
@@ -121,17 +125,33 @@ def phase_corr(kymo1, kymo2,
     # shift, error, diffphase = register_translation(squared_kymo1, squared_kymo2)
 
     ######## plotting ######
-    fig, axes = plt.subplots(1,3, figsize=(10,4), sharex=True, sharey=True)
-    ax = axes.ravel()
-    ax[0].set_title(title1)
-    ax[0].imshow(squared_kymo1)
+    fig, ax = plt.subplots(1,1, figsize=(4,4))
+    # ax.set_title(title1)
+    ax.set_xlabel("time (frames)")
+    ax.set_ylabel("space (pixel)")
 
-    ax[1].set_title(title2)
-    ax[1].imshow(squared_kymo2)
-    c = ax[2].imshow(correlation)
+    r = ax.imshow(squared_kymo1)
+    cbar = plt.colorbar(r)
+    # cbar.set_label('radius deviations (pixel)', rotation=270)
+    plt.savefig(path_name + 'branch' + str(label) + '_' + title1 +  'detrend.pdf', dpi=600)
+    plt.close()
 
-    ax[2].set_ylabel('pixel offset')
-    ax[2].set_xlabel('frames offset')
+    fig, ax = plt.subplots(1,1, figsize=(4,4))
+    # ax.set_title(title2)
+    ax.set_xlabel("time (frames)")
+    ax.set_ylabel("space (pixel)")
+    c = ax.imshow(squared_kymo2)
+    cbar = plt.colorbar(c)
+    # cbar.set_label('concentration (a.u.)', rotation=270)
+
+    plt.savefig(path_name + 'branch' + str(label) + '_' + title2 +  'detrend.pdf', dpi=600)
+    plt.close()
+    ######
+
+    plt.imshow(correlation)
+
+    plt.ylabel('space lag')
+    plt.xlabel('time lag')
 
 
     x_range, t_range = np.shape(correlation)[0], np.shape(correlation)[1]
@@ -151,7 +171,7 @@ def phase_corr(kymo1, kymo2,
     plt.xticks([t_range/2], (0,) )
     plt.yticks([x_range/2], (0,) )
 
-    fig.colorbar(c)
+    plt.colorbar()
     plt.grid(linestyle='-', linewidth=0.1)
     plt.legend()
 
@@ -182,8 +202,8 @@ def main():
     align_keyword   = 'reference_point'
     method          = 'inter_mean'
 
-    for order in ['gt', 'tg']:
-        set     = data(set_keyword, method=method, order=order)
+    for order in ['green']:
+        set     = data(set_keyword, method=method, color=order)
 
         kymos = np.load(set.file_dat_set + '_branch_' + str(label) + '.npz')
         path_name = set.file_plot_set + '_branch_' + str(label) + '/'
@@ -192,15 +212,15 @@ def main():
 
         correlate_the2(kymos, 'kymograph_local_radii', 'kymograph_concentration',
                        'radius', 'Ca-concentration',
-                       align_keyword, label, path_name, upsample=5, detrending='gauss', show=False)
+                       align_keyword, label, path_name, upsample=1, detrending='radius', show=False)
     #
     # correlate_the2(kymos, 'kymograph_inner', 'kymograph_outer',
     #                'inner-Ca', 'outer-Ca',
     #                align_keyword, label, path_name, 5, show=False)
     #
-    # correlate_the2(kymos, 'kymograph_local_radii', 'kymograph_inner',
-    #                'radius', 'inner-Ca',
-    #                align_keyword, label, path_name, 5, show=False)
+        # correlate_the2(kymos, 'kymograph_local_radii', 'kymograph_inner',
+        #                'radius', 'inner-Ca',
+        #                align_keyword, label, path_name, upsample=1, detrending='gauss', show=False)
 
     # ######### plot kymos ########
     # kymograph_local_radii   = kymos['kymograph_local_radii']

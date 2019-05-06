@@ -9,10 +9,7 @@ from multiprocessing.dummy import Pool as ThreadPool
 def process_ratiometric(set, use_ref_for_mask = True):
     ### read ###
     green = read_file(set.file_raw1)
-    if set.order == 'rev':
-        texas = read_file(set.file_raw2_rev)
-    else:
-        texas = read_file(set.file_raw2)
+    texas = read_file(set.file_raw2)
 
     ### mask, spots removal ###
     if use_ref_for_mask:
@@ -63,7 +60,7 @@ def main(): ## python3 ratiometric.py <keyword> <first> <last(+1)>
 
 ##### green(i) texas(i+0.5), texas(i-0.5) green(i) ####
     for order in ['gt', 'tg']:
-        data_sets = [data(set_keyword, i, method, order) for i in range( int(os.sys.argv[2]),int(os.sys.argv[3]) )]
+        data_sets = [data(set_keyword, i, method, color=order) for i in range( int(os.sys.argv[2]),int(os.sys.argv[3]) )]
 
         if not os.path.exists(data(set_keyword).path_results):
             os.mkdir(data(set_keyword).path_results)

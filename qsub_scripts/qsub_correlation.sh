@@ -2,7 +2,7 @@
 # . ~/.bash_profile
 # . ~/.bashrc
 #$ -S /bin/bash
-#$ -N skeleton
+#$ -N corr
 #$ -cwd
 #$ -q grotrian.q
 #$ -l h=!grotrian19

@@ -25,7 +25,10 @@ def main():
     data_sets = [data(set_keyword, i, method, order) for i in np.arange( int(os.sys.argv[2]),int(os.sys.argv[3]), sample_step )]
     # data_sets = [data(set_keyword, i, method, order) for i in np.arange(2,3)]
 
-    plot_samples(data_sets, True)
+    # def plot_image(file_dat, keyword, file_plot, show=False):
+
+    plot_image(data_sets[0].file_dat, 'ratio', data_sets[0].file_plot)
+    # plot_samples(data_sets, True)
 
 
 if __name__ == "__main__":

@@ -238,7 +238,7 @@ def project_on_skeleton(dye, skeleton):
     return concentration
 
 
-def inter_mean(dye, skeleton, mask, local_radii):
+def inter_mean(dye, skeleton, mask, local_radii, interval_size = 10):
     ### orth. projection on skeleton by finding the nearest point in skeleton
     # + average over nearest pixel in skeleton within r <= ~ 10 or so
     intensity_inner = np.zeros_like(dye)
@@ -278,9 +278,9 @@ def inter_mean(dye, skeleton, mask, local_radii):
     concentration_outer = np.true_divide(intensity_outer, no_outer,
                                          out=np.zeros_like(dye), where=intensity_outer!=0)
 
-    concentration         = disk_filter(concentration, concentration, 10) * skeleton
-    concentration_inner   = disk_filter(concentration_inner, concentration, 10) * skeleton
-    concentration_inner   = disk_filter(concentration_outer, concentration, 10) * skeleton
+    concentration         = disk_filter(concentration, concentration, interval_size) * skeleton
+    concentration_inner   = disk_filter(concentration_inner, concentration, interval_size) * skeleton
+    concentration_inner   = disk_filter(concentration_outer, concentration, interval_size) * skeleton
 
 
     return concentration, concentration_inner, concentration_outer

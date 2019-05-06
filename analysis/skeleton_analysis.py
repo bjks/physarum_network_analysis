@@ -1,6 +1,8 @@
 import numpy as np
 import skimage.morphology as morph
 import copy
+import os
+
 
 def node_detection(bitmap):
     skeleton = np.where(bitmap!=0, 1, 0)
@@ -102,3 +104,70 @@ def extract_branch(file_dat, seed_position, quantities):
 
 
     return values_in_branch, seed_position, skeleton, label
+
+
+################## skeleton ####################
+def process_skeleton(data_sets, seed_position, label):
+    last_endpoint = seed_position
+
+    kymograph_local_radii   = []
+    kymograph_concentration = []
+    kymograph_inner         = []
+    kymograph_outer         = []
+
+    path                    = []
+    alignment               = []
+
+    for set in data_sets:
+        print(">> Analyse %s"  % (set.file_dat))
+
+        values, seed_position, skeleton, l = extract_branch(set.file_dat, seed_position,
+                                                            ['local_radii',
+                                                            'concentration',
+                                                            'concentration_inner',
+                                                            'concentration_outer'])
+
+        along_path , path_coords, last_endpoint = follow_all_paths(values, last_endpoint)
+        path.append(path_coords)
+
+        kymograph_local_radii.append(along_path[0])
+        kymograph_concentration.append(along_path[1])
+        kymograph_inner.append(along_path[2])
+        kymograph_outer.append(along_path[3])
+        ##### use first set as reference point ####
+        if set == data_sets[0]:
+            alignment.append(int(len(path_coords)/2))
+            reference_point = path_coords[int(len(path_coords)/2)]
+
+            branch_map = skeleton + values[0]
+
+        else:
+            point_to_align = closest_point_in_skel(reference_point, values[0])
+            alignment.append(path_coords.index([point_to_align[0], point_to_align[1]]))
+
+    ### save everything
+    np.savez_compressed(set.file_dat_set + '_branch_' + str(label),
+                        branch_map              = branch_map,
+                        kymograph_local_radii   = kymograph_local_radii,
+                        kymograph_concentration = kymograph_concentration,
+                        kymograph_inner         = kymograph_inner,
+                        kymograph_outer         = kymograph_outer,
+                        path                    = path,
+                        alignment               = alignment)
+
+
+    ### plotting
+    if not os.path.exists(set.path_plots):
+        os.mkdir(set.path_plots)
+
+    path_name = set.file_plot_set + '_branch_' + str(label) + '/'
+    if not os.path.exists(path_name):
+        os.mkdir(path_name)
+
+    plot_branch(branch_map, label, path_name)
+
+    plot_kymos(kymograph_local_radii, kymograph_concentration, 'radii', 'concentration',
+               label, path_name, 'reference_point', alignment)
+
+    # plot_kymos(kymograph_inner, kymograph_outer, 'innner', 'outer',
+    #            label, path_name, 'reference_point', alignment)

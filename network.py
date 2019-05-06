@@ -10,13 +10,13 @@ def invert_BF(image):
     return - image + np.max(image)
 
 
-def process_network(set, color = 'texas'):
+def process_network(set):
 
-    if color=='texas':
+    if set.color=='texas':
         network = read_file(set.file_raw2)
-    elif color=='green':
+    elif set.color=='green':
         network = read_file(set.file_raw1)
-    elif color=='BF':
+    elif set.color=='BF':
         network = invert_BF(read_file(set.file_raw))
 
 
@@ -24,6 +24,7 @@ def process_network(set, color = 'texas'):
     mask = extract_nerwork(mask)
 
     network_clean = np.multiply(network, mask)
+    spots_mask, network_clean     = remove_spots(network_clean, mask, set.spots_sig, set.thresh_spots)
 
     skeleton                       = extract_skeleton(mask)
     local_radii                    = extract_radii(mask, skeleton)
@@ -35,12 +36,13 @@ def process_network(set, color = 'texas'):
     if set.method == 'inter_mean':
         concentration, concentration_inner, concentration_outer = inter_mean(network_clean, skeleton, mask, local_radii)
 
-    np.savez_compressed(set.file_dat+color,     network_clean       = network_clean,
-                                                skeleton            = skeleton,
-                                                local_radii         = local_radii,
-                                                concentration       = concentration,
-                                                concentration_inner = concentration_inner,
-                                                concentration_outer = concentration_outer)
+    np.savez_compressed(set.file_dat,   network_clean       = network_clean,
+                                        skeleton            = skeleton,
+                                        local_radii         = local_radii,
+                                        mask                = mask,
+                                        concentration       = concentration,
+                                        concentration_inner = concentration_inner,
+                                        concentration_outer = concentration_outer)
 
 
 
@@ -52,20 +54,16 @@ def main(): ## python3 ratiometric.py <keyword> <first> <last(+1)>
 
     set_keyword = os.sys.argv[1]
     method = 'inter_mean'
-    color = 'BF'
-    if color == 'BF':
-        data_sets = [dataBF(set_keyword, i, method) for i in range( int(os.sys.argv[2]),int(os.sys.argv[3]) )]
+    color =  str(os.sys.argv[2])
 
-        if not os.path.exists(dataBF(set_keyword).path_results):
-            os.mkdir(dataBF(set_keyword).path_results)
-    else:
-        data_sets = [data(set_keyword, i, method) for i in range( int(os.sys.argv[2]),int(os.sys.argv[3]) )]
+    data_sets = [data(set_keyword, i, method, color=color) for i in range( int(os.sys.argv[3]),int(os.sys.argv[4]) )]
 
-        if not os.path.exists(data(set_keyword).path_results):
-            os.mkdir(data(set_keyword).path_results)
+    if not os.path.exists(data(set_keyword).path_results):
+        os.mkdir(data(set_keyword).path_results)
 
     for set in data_sets:
-        process_network(set, color=color)
+        print(set.file_dat)
+        process_network(set)
 
     print('Done')
 
