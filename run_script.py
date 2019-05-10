@@ -4,23 +4,28 @@ from analysis.data_sets import *
 
 to_qsub = ' ' + '/data.bpm/bksche/network_analysis/qsub_scripts/' # space at beginning
 
+
+#####
 def command_ratiometric(name, a, b):
     return 'qsub -v NAME=' + name + ',START=' + str(a) + ',END=' + str(b) + to_qsub + 'qsub_ratiometric.sh'
 
 def command_skeleton(name, no):
     return 'qsub -v NAME=' + name + ',NO=' + str(no) + to_qsub + 'qsub_skeleton.sh'
 
+#####
+def command_network(name, a, b, col):
+    return 'qsub -v NAME=' + name + ',COL=' + str(col) + ',START=' + str(a) + ',END=' + str(b) + to_qsub + 'qsub_network.sh'
+
 def command_skeleton_network(name, no, col):
     return 'qsub -v NAME=' + name + ',COL=' + str(col) + ',NO=' + str(no) + to_qsub + 'qsub_skeleton_network.sh'
 
+
+#####
 def command_correlation(name, no):
     return 'qsub -v NAME=' + name + ',NO=' + str(no) + to_qsub + 'qsub_correlation.sh'
 
 def command_tube_profile(name, no):
     return 'qsub -v NAME=' + name + ',NO=' + str(no) + to_qsub + 'qsub_tube_profile.sh'
-
-def command_network(name, a, b, col):
-    return 'qsub -v NAME=' + name + ',COL=' + str(col) + ',START=' + str(a) + ',END=' + str(b) + to_qsub + 'qsub_network.sh'
 
 def command_animation(name, no):
     return 'qsub -v NAME=' + name + ',NO=' + str(no) + to_qsub +  'qsub_animation.sh'

@@ -6,6 +6,10 @@ rsync -azP bksche@10.216.1.1:/data.bpm/bksche/results --include '*/' --include '
 rsync -azP bksche@10.216.2.1:/data.bpm/bksche/results --include '*/' --include 'kymo*' --exclude '*' Documents/image_analysis/
 
 
+------ MP4s ------
+rsync -azP bksche@10.216.1.1:/data.bpm/bksche/plots --include '*/' --include '*.mp4' --exclude '*' Documents/image_analysis/
+rsync -azP bksche@10.216.2.1:/data.bpm/bksche/plots --include '*/' --include '*.mp4' --exclude '*' Documents/image_analysis/
+
 
 ------ SAMPLE ------
 rsync -azP --dry-run bksche@10.216.1.1:/data.bpm/bksche/results --include '*/' --include '*002_*' --exclude '*' Documents/image_analysis/
@@ -13,6 +17,11 @@ rsync -azP --dry-run bksche@10.216.2.1:/data.bpm/bksche/results --include '*/' -
 
 
 
------- SAMPLE ------
+------ RESULTS ------
+rsync -azP bksche@10.216.1.1:/data.bpm/bksche/results/2019-04-11 --include '*/' Documents/image_analysis/results/
+rsync -azP --dry-run bksche@10.216.2.1:/data.bpm/bksche/results Documents/image_analysis/
+
+
+------ CODE ------
 rsync -azP --dry-run  Documents/image_analysis/network_analysis --include '*/' --exclude 'git' bksche@10.216.1.1:/data.bpm/bksche/
 rsync -azP --dry-run  Documents/image_analysis/network_analysis --include '*/' --exclude 'git' bksche@10.216.2.1:/data.bpm/bksche/

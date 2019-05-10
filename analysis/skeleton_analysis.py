@@ -1,6 +1,7 @@
 import numpy as np
 import skimage.morphology as morph
 import copy
+from analysis.plotting import *
 import os
 
 
@@ -138,12 +139,14 @@ def process_skeleton(data_sets, seed_position, label):
         if set == data_sets[0]:
             alignment.append(int(len(path_coords)/2))
             reference_point = path_coords[int(len(path_coords)/2)]
-
+            lenght0 = len(path_coords)
             branch_map = skeleton + values[0]
 
         else:
             point_to_align = closest_point_in_skel(reference_point, values[0])
             alignment.append(path_coords.index([point_to_align[0], point_to_align[1]]))
+            if len(path_coords) < 0.7*lenght0:
+                break
 
     ### save everything
     np.savez_compressed(set.file_dat_set + '_branch_' + str(label),

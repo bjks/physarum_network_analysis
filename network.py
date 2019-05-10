@@ -22,6 +22,8 @@ def process_network(set):
 
     mask = create_mask(network, set.sigma, set.threshold, set.halo_sig )
     mask = extract_nerwork(mask)
+    plt.imshow(mask)
+    plt.show()
 
     network_clean = np.multiply(network, mask)
     spots_mask, network_clean     = remove_spots(network_clean, mask, set.spots_sig, set.thresh_spots)

@@ -17,15 +17,17 @@ def wall_height(r, d):
     hw = np.where(r < R1, np.sqrt(1 - r**2) - np.sqrt(R1**2 - r**2), np.sqrt(1 - r**2))
     return hw
 
-def tube_height(r):
-    return np.sqrt(1 - r**2)
+def tube_height(R, r):
+    return np.sqrt(R**2 - r**2)
 
 def main():
 
     r = np.linspace(0, 1, 1000)
-    plt.plot(r, tube_height(r), c='red')
+    r = r[:-1]
+    plt.plot(r, tube_height(1, r), c='red')
     plt.plot(r, wall_height(r, 0.1), c='green')
-    plt.plot(r, wall_height(r, 0.1)/tube_height(r), c='blue')
+    print(np.mean(tube_height(2, 2*r))/ np.mean(tube_height(1, r)))
+    plt.plot(r, wall_height(r, 0.1)/tube_height(1, r), c='blue')
 
     plt.savefig('model_tube.pdf')
 

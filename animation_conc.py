@@ -14,40 +14,51 @@ title = 'intensity'
 step = 1
 
 set_keyword = os.sys.argv[1]
+if sys.platform.startswith('linux'): # i.e. you are on the (ubuntu) cluster
+    color = 'gt'
+else:
+    color = os.sys.argv[3]
+
 step = int(os.sys.argv[2])
 method = 'inter_mean'
 
-data_sets = [data(set_keyword, i, method) for i in np.arange(data(set_keyword).first, data(set_keyword).last)]
+data_sets = [data(set_keyword, i, method, color=color) for i in np.arange(data(set_keyword).first, data(set_keyword).last)]
 
 #################################################################
 
 
 map = []
 print('>> Reading...')
-first, last = 250, 450
+first, last = data(set_keyword).first , data(set_keyword).last
 t_arr = np.arange(first,last, step)
+print(t_arr)
 
-for i in t_arr:
+for i in range(len(t_arr)-1):
     print(' >>', i )
+    print(data_sets[i].file_dat)
     concentration = np.load(data_sets[i].file_dat + '.npz')['concentration']
-    mask = np.where(np.load(data_sets[i].file_dat + '.npz')['green_clean'] !=0, 1, 0)
+    mask = np.load(data_sets[i].file_dat + '.npz')['mask']
     skeleton = np.load(data_sets[i].file_dat + '.npz')['skeleton']
-    green_clean = np.load(data_sets[i].file_dat + '.npz')['green_clean']
-    texas_clean = np.load(data_sets[i].file_dat + '.npz')['texas_clean']
+
 
 
     if keyword == 'raw':
+        green_clean = np.load(data_sets[i].file_dat + '.npz')['green_clean']
+        texas_clean = np.load(data_sets[i].file_dat + '.npz')['texas_clean']
         image = calc_ratio(green_clean, texas_clean)
 
     else:
         image = tube_radius_at_point(mask, skeleton, concentration)
 
-    image = np.ma.masked_where(image == 0, image)
+    image = np.where(image == 0, np.nan, image)
     map.append(image)
 
 print('>> Create animation...')
 fig = plt.figure()
-im = plt.imshow(map[0], interpolation="none", cmap='jet', vmin=0.5, vmax=1.2)
+std_im, mean_im = np.nanstd(map), np.nanmean(map)
+print(mean_im)
+min, max = mean_im - std_im, mean_im + std_im
+im = plt.imshow(map[0], interpolation="none", cmap='Spectral_r', vmin = min, vmax = max)
 plt.colorbar(im)
 
 title = plt.title("")

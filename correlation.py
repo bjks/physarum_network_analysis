@@ -86,13 +86,13 @@ def norm_with_model(radii, d):
         mean[i] = disk_mean_num(radii_f[i], d)
     return mean.reshape(np.shape(radii))
 
-
+######################## PHASE CORR ###########################
 def phase_corr(kymo1, kymo2,
                title1, title2, label, path_name,
                align_keyword, alignment, detrending='gauss', show=False, upsample=1):
 
-    kymo1 = align_kymo(kymo1, align_keyword, alignment=alignment)
-    kymo2 = align_kymo(kymo2, align_keyword, alignment=alignment)
+    kymo1 = align_kymo(kymo1, align_keyword, alignment=alignment)[:][125:250]
+    kymo2 = align_kymo(kymo2, align_keyword, alignment=alignment)[:][125:250]
 
     squared_kymo1 = np.transpose(crop_aligned_kymo(kymo1))
     squared_kymo2 = np.transpose(crop_aligned_kymo(kymo2))
@@ -108,9 +108,9 @@ def phase_corr(kymo1, kymo2,
         squared_kymo1 = detrend(squared_kymo1, 40)
         squared_kymo2 = detrend(squared_kymo2, 40)
     elif detrending == 'radius':
-        squared_kymo2/= squared_kymo1
-        squared_kymo1 = detrend(squared_kymo1, 40)
-        squared_kymo2 = detrend(squared_kymo2, 40)
+        squared_kymo2/= (squared_kymo1)
+        squared_kymo1 = detrend(squared_kymo1, 30)
+        squared_kymo2 = detrend(squared_kymo2, 30)
 
 
     squared_kymo1 = ndi.zoom(squared_kymo1, upsample, order=2)
