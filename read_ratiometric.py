@@ -27,8 +27,8 @@ def main():
 
     # def plot_image(file_dat, keyword, file_plot, show=False):
 
-    plot_image(data_sets[0].file_dat, 'ratio', data_sets[0].file_plot)
-    # plot_samples(data_sets, True)
+    # plot_image(data_sets[0].file_dat, 'ratio', data_sets[0].file_plot)
+    plot_samples(data_sets, True)
 
 
 if __name__ == "__main__":

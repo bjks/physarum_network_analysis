@@ -145,7 +145,7 @@ def process_skeleton(data_sets, seed_position, label):
         else:
             point_to_align = closest_point_in_skel(reference_point, values[0])
             alignment.append(path_coords.index([point_to_align[0], point_to_align[1]]))
-            if len(path_coords) < 0.7*lenght0:
+            if len(path_coords) < 0.2*lenght0:
                 break
 
     ### save everything

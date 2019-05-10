@@ -40,7 +40,8 @@ def interpl_dye(raw1, raw2):
 
 
 def main():
-
+    print(len(os.sys.argv))
+    return
     r = np.linspace(0, 1, 1000)
     plt.plot(r, wall_height(1, r, 0.1))
     plt.plot(r, wall_model_profile(1, r, 0.1))

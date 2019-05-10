@@ -55,6 +55,7 @@ def create_mask(dye, sig, thresh, halo_sig=None):
     return mask
 
 def extract_nerwork(mask):
+    # returns mask that contains only the largest connected area
     labels = morph.label(mask, connectivity=2)
     regions = regionprops(labels)
 
@@ -122,6 +123,7 @@ def nan_mean(values):
 ###
 
 def disk_filter(dye, mask, r):
+    # returns average within disk around pixel, only pixels in mask contribute
     dye_filtered = np.where(mask!=0, dye, np.nan) # 0 -> NaN (to be ignored in nanmean)
     selem        = morph.disk(r)
 

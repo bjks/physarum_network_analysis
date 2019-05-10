@@ -7,9 +7,7 @@ from ratiometric import *
 from skeleton import *
 import matplotlib.pyplot as plt
 
-def processing_visualization_network(file_dat, file_plot, color='BF', show=False):
-    file_dat += color
-    file_plot += color
+def processing_visualization_network(file_dat, file_plot, show=False):
     data = np.load(file_dat + '.npz')
 
     fig, axes = plt.subplots(1,3, figsize=(6, 6), sharex=True, sharey=True)
@@ -44,14 +42,15 @@ def plot_samples_network(data_sets, show=True):
 def main():
 
     set_keyword = os.sys.argv[1]
-    sample_step = int(os.sys.argv[4])
+    sample_step = int(os.sys.argv[5])
     method = 'inter_mean'
+    color =  str(os.sys.argv[2])
 
-    data_sets = [dataBF(set_keyword, i, method) for i in np.arange( int(os.sys.argv[2]),int(os.sys.argv[3]), sample_step )]
+    data_sets = [data(set_keyword, i, method, color=color) for i in np.arange( int(os.sys.argv[3]),int(os.sys.argv[4]), sample_step )]
 
     # data_sets = [data(set_keyword, i, method, order) for i in np.arange(2,3)]
 
-    plot_samples_network(data_sets, True)
+    plot_samples_network(data_sets)
 
 
 if __name__ == "__main__":

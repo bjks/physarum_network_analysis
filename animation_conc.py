@@ -9,46 +9,45 @@ def update(t):
     title.set_text( 'frame: ' + str(t_arr[t]) )
 
 #################################################################
-keyword = 'raw'
-title = 'intensity'
-step = 1
 
 set_keyword = os.sys.argv[1]
-if sys.platform.startswith('linux'): # i.e. you are on the (ubuntu) cluster
-    color = 'gt'
-else:
-    color = os.sys.argv[3]
+keyword = os.sys.argv[2]
+color = os.sys.argv[3]
+step = int(os.sys.argv[4])
 
-step = int(os.sys.argv[2])
 method = 'inter_mean'
 
-data_sets = [data(set_keyword, i, method, color=color) for i in np.arange(data(set_keyword).first, data(set_keyword).last)]
+first, last = data(set_keyword).first, data(set_keyword).last
+t_arr = np.arange(first,last, step)
+
+data_sets = [data(set_keyword, i, method, color=color) for i in t_arr]
 
 #################################################################
 
 
 map = []
 print('>> Reading...')
-first, last = data(set_keyword).first , data(set_keyword).last
-t_arr = np.arange(first,last, step)
+# first, last = data(set_keyword).first , data(set_keyword).last
 print(t_arr)
 
-for i in range(len(t_arr)-1):
-    print(' >>', i )
-    print(data_sets[i].file_dat)
-    concentration = np.load(data_sets[i].file_dat + '.npz')['concentration']
-    mask = np.load(data_sets[i].file_dat + '.npz')['mask']
-    skeleton = np.load(data_sets[i].file_dat + '.npz')['skeleton']
-
-
+for set, t in zip(data_sets, t_arr):
+    print(' >>', t )
+    print(set.file_dat)
+    concentration = np.load(set.file_dat + '.npz')['concentration']
+    local_radii   = np.load(set.file_dat + '.npz')['local_radii']
+    mask = np.load(set.file_dat + '.npz')['mask']
+    skeleton = np.load(set.file_dat + '.npz')['skeleton']
 
     if keyword == 'raw':
-        green_clean = np.load(data_sets[i].file_dat + '.npz')['green_clean']
-        texas_clean = np.load(data_sets[i].file_dat + '.npz')['texas_clean']
+        green_clean = np.load(set.file_dat + '.npz')['green_clean']
+        texas_clean = np.load(set.file_dat + '.npz')['texas_clean']
         image = calc_ratio(green_clean, texas_clean)
 
-    else:
+    elif keyword == 'concentration':
         image = tube_radius_at_point(mask, skeleton, concentration)
+    elif keyword == 'norm_conc':
+        norm_conc = calc_ratio(concentration, local_radii)
+        image = tube_radius_at_point(mask, skeleton, norm_conc)
 
     image = np.where(image == 0, np.nan, image)
     map.append(image)
@@ -67,4 +66,6 @@ ani = animation.FuncAnimation(fig, func=update, frames=len(t_arr),
                               repeat=False, interval=200)
 
 print('>> Saving...')
-ani.save(data_sets[i].file_plot_set + keyword + '2.mp4', writer="ffmpeg")
+if not os.path.exists(data_sets[0].path_plots):
+    os.mkdir(data_sets[0].path_plots)
+ani.save(data_sets[0].file_plot_set + keyword + '.mp4', writer="ffmpeg")
