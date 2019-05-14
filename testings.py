@@ -9,6 +9,7 @@ from correlation import *
 from timeit import default_timer as timer
 import os
 from scipy.ndimage.filters import generic_filter
+from fft_analysis import *
 
 from multiprocessing.dummy import Pool as ThreadPool
 
@@ -40,18 +41,17 @@ def interpl_dye(raw1, raw2):
 
 
 def main():
-    print(len(os.sys.argv))
-    return
-    r = np.linspace(0, 1, 1000)
-    plt.plot(r, wall_height(1, r, 0.1))
-    plt.plot(r, wall_model_profile(1, r, 0.1))
-    plt.plot(r, np.sqrt(1.**2 - r**2))
-    plt.plot(r, h)
-    R = np.linspace(20,100, 100)
-    d = 10.
-    plt.plot(R, [disk_mean_num(Ri, d) for Ri in R]  )
 
-    plt.show()
+    # r = np.linspace(0, 1, 1000)
+    # plt.plot(r, wall_height(1, r, 0.1))
+    # plt.plot(r, wall_model_profile(1, r, 0.1))
+    # plt.plot(r, np.sqrt(1.**2 - r**2))
+    # plt.plot(r, h)
+    # R = np.linspace(20,100, 100)
+    # d = 10.
+    # plt.plot(R, [disk_mean_num(Ri, d) for Ri in R]  )
+    #
+    # plt.show()
 
     # set_keyword = os.sys.argv[1]
     # method= 'disk_mean'
@@ -92,12 +92,16 @@ def main():
 
     #
     #
-    # a = [np.arange(0,20) for i in range(20)]
-    # a = np.transpose(np.array(a))
-    # x = -np.cos(a+0.5)
-    # y = np.cos(a)
+    n= 100
+    a = [np.arange(0,n) for i in range(n)]
+    a = np.transpose(np.array(a))
+    x = -np.cos(a+0.5)
+    y = np.cos(a)
+    plt.imshow(x)
+    plt.show()
+    fft_kymo(x)
 
-    phase_corr(x, y, 'x', 'y', 2, 'y_before_x', 'start', None, detrending='gauss', upsample=10, show=True)
+    # phase_corr(x, y, 'x', 'y', 2, 'y_before_x', 'start', None, detrending='gauss', upsample=10, show=True)
 
 
 

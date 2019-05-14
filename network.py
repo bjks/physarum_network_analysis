@@ -1,12 +1,11 @@
 from analysis.network_analysis import *
 from analysis.data_sets import *
-from analysis.data_setsBF import *
 import skimage.morphology as morph
 import os
 from analysis.plotting import *
 from multiprocessing.dummy import Pool as ThreadPool
 
-def invert_BF(image):
+def invert_bf(image):
     return - image + np.max(image)
 
 
@@ -16,8 +15,8 @@ def process_network(set):
         network = read_file(set.file_raw2)
     elif set.color=='green':
         network = read_file(set.file_raw1)
-    elif set.color=='BF':
-        network = invert_BF(read_file(set.file_raw))
+    elif set.color=='bf':
+        network = invert_bf(read_file(set.file_raw))
 
 
     mask = create_mask(network, set.sigma, set.threshold, set.halo_sig )
@@ -59,9 +58,6 @@ def main(): ## python3 ratiometric.py <keyword> <first> <last(+1)>
     color =  str(os.sys.argv[2])
 
     data_sets = [data(set_keyword, i, method, color=color) for i in range( int(os.sys.argv[3]),int(os.sys.argv[4]) )]
-
-    if not os.path.exists(data(set_keyword).path_results):
-        os.mkdir(data(set_keyword).path_results)
 
     for set in data_sets:
         print(set.file_dat)

@@ -15,11 +15,12 @@ from scipy.signal import find_peaks
 
 def fft_kymo(kymo):
     squared_kymo = crop_aligned_kymo(kymo)
+    squared_kymo = detrend(squared_kymo, 40)
     kymo_f = np.fft.fft2(squared_kymo)
-    real = kymo_f.real
-    real = np.ma.masked_where(real < 0, real)
-    real = np.ma.masked_where(real > 10000, real)
-    plt.imshow(np.transpose(real))
+    # real = ndi.gaussian_filter(real, sigma=1)
+
+    # real = np.fft.fftshift(kymo_f).real
+    plt.imshow(np.transpose(squared_kymo))
     plt.show()
 
 def power_spec(kymo1, kymo2, label, path_name):
@@ -35,10 +36,10 @@ def power_spec(kymo1, kymo2, label, path_name):
     fig, axes = plt.subplots(2,2, figsize=(5,6))
     ax = axes.ravel()
 
-    ax[0].imshow(Pxx_den1)
+    ax[0].imshow(Pxx_den1, vmin=0.03)
     ax[0].set_title('radius')
 
-    ax[1].imshow(Pxx_den2)
+    ax[1].imshow(Pxx_den2, vmin=0.03)
     ax[1].set_title('concentration')
 
 
@@ -69,13 +70,12 @@ def power_spec(kymo1, kymo2, label, path_name):
 def main():
     set_keyword     = os.sys.argv[1]
     label           = os.sys.argv[2]
-
+    color           = os.sys.argv[3]
     align_keyword   = 'reference_point'
-    method          = 'disk_mean'
+    method          = 'inter_mean'
     max_offset      = 50
 
-
-    set     = data(set_keyword, method=method)
+    set     = data(set_keyword, method=method, color=color)
 
     kymos = np.load(set.file_dat_set + '_branch_' + str(label) + '.npz')
     alignment=kymos['alignment']
@@ -85,6 +85,7 @@ def main():
 
     path_name = set.file_plot_set + '_branch_' + str(label) + '/'
 
+    fft_kymo(radii)
     power_spec(radii, conce, label, path_name)
 
 

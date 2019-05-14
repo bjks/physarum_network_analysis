@@ -91,8 +91,8 @@ def phase_corr(kymo1, kymo2,
                title1, title2, label, path_name,
                align_keyword, alignment, detrending='gauss', show=False, upsample=1):
 
-    kymo1 = align_kymo(kymo1, align_keyword, alignment=alignment)[:][125:250]
-    kymo2 = align_kymo(kymo2, align_keyword, alignment=alignment)[:][125:250]
+    kymo1 = align_kymo(kymo1, align_keyword, alignment=alignment)
+    kymo2 = align_kymo(kymo2, align_keyword, alignment=alignment)
 
     squared_kymo1 = np.transpose(crop_aligned_kymo(kymo1))
     squared_kymo2 = np.transpose(crop_aligned_kymo(kymo2))
@@ -112,21 +112,9 @@ def phase_corr(kymo1, kymo2,
         squared_kymo1 = detrend(squared_kymo1, 30)
         squared_kymo2 = detrend(squared_kymo2, 30)
 
-
-    squared_kymo1 = ndi.zoom(squared_kymo1, upsample, order=2)
-    squared_kymo2 = ndi.zoom(squared_kymo2, upsample, order=2)
-    image_product = np.fft.fft2(squared_kymo1) * np.fft.fft2(squared_kymo2).conj()
-    cc_image = np.fft.ifft2(image_product)
-
-    unshifted_correlation = cc_image.real
-    correlation = np.fft.fftshift(cc_image).real
-
-
-    # shift, error, diffphase = register_translation(squared_kymo1, squared_kymo2)
-
-    ######## plotting ######
+    ######## plot kymos ######
     fig, ax = plt.subplots(1,1, figsize=(4,4))
-    # ax.set_title(title1)
+    ax.set_title(title1)
     ax.set_xlabel("time (frames)")
     ax.set_ylabel("space (pixel)")
 
@@ -137,7 +125,7 @@ def phase_corr(kymo1, kymo2,
     plt.close()
 
     fig, ax = plt.subplots(1,1, figsize=(4,4))
-    # ax.set_title(title2)
+    ax.set_title(title2)
     ax.set_xlabel("time (frames)")
     ax.set_ylabel("space (pixel)")
     c = ax.imshow(squared_kymo2)
@@ -147,6 +135,18 @@ def phase_corr(kymo1, kymo2,
     plt.savefig(path_name + 'branch' + str(label) + '_' + title2 +  'detrend.pdf', dpi=600)
     plt.close()
     ######
+
+    #### correlation
+    squared_kymo1 = ndi.zoom(squared_kymo1, upsample, order=2)
+    squared_kymo2 = ndi.zoom(squared_kymo2, upsample, order=2)
+    image_product = np.fft.fft2(squared_kymo1) * np.fft.fft2(squared_kymo2).conj()
+    cc_image = np.fft.ifft2(image_product)
+
+    unshifted_correlation = cc_image.real
+    correlation = np.fft.fftshift(cc_image).real
+
+
+    # shift, error, diffphase = register_translation(squared_kymo1, squared_kymo2)
 
     plt.imshow(correlation)
 
@@ -212,7 +212,7 @@ def main():
 
         correlate_the2(kymos, 'kymograph_local_radii', 'kymograph_concentration',
                        'radius', 'Ca-concentration',
-                       align_keyword, label, path_name, upsample=1, detrending='radius', show=False)
+                       align_keyword, label, path_name, upsample=10, detrending='radius', show=False)
     #
     # correlate_the2(kymos, 'kymograph_inner', 'kymograph_outer',
     #                'inner-Ca', 'outer-Ca',

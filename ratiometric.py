@@ -62,9 +62,6 @@ def main(): ## python3 ratiometric.py <keyword> <first> <last(+1)>
     for order in ['gt', 'tg']:
         data_sets = [data(set_keyword, i, method, color=order) for i in range( int(os.sys.argv[2]),int(os.sys.argv[3]) )]
 
-        if not os.path.exists(data(set_keyword).path_results):
-            os.mkdir(data(set_keyword).path_results)
-
         for set in data_sets:
             print(set.file_dat)
             process_ratiometric(set)

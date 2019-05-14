@@ -16,20 +16,15 @@ def collect_data(data_sets):
     t   = np.array([])
 
     for set in data_sets:
-        print(set.file_raw1)
-        green = read_file( set.file_raw1 )
-        texas = read_file( set.file_raw2 )
-        mask = create_mask(texas, set.sigma, set.threshold, set.halo_sig)
+        print(set.file_dat)
 
-        mask = extract_nerwork(mask)
-
-        green_clean = green * mask
-        texas_clean = texas * mask
+        green_clean = np.load(set.file_dat + '.npz')['green_clean']
+        texas_clean = np.load(set.file_dat + '.npz')['texas_clean']
+        mask        = np.load(set.file_dat + '.npz')['mask']
+        skeleton    = np.load(set.file_dat + '.npz')['skeleton']
+        local_radii = np.load(set.file_dat + '.npz')['local_radii']
 
         # spots_mask, green_clean     = remove_spots(green_clean, mask, set.spots_sig, set.thresh_spots)
-
-        skeleton                       = extract_skeleton(mask)
-        local_radii                    = extract_radii(mask, skeleton)
 
         relative_dist = relative_distance(skeleton, mask, local_radii)
         radius = tube_radius_at_point(mask, skeleton, local_radii)
@@ -41,7 +36,7 @@ def collect_data(data_sets):
         g  =    np.append(g,    green_clean[np.where(dist_mask)])
         t  =    np.append(t,    texas_clean[np.where(dist_mask)])
 
-    return r, rd, g, t, g/t
+    return r, rd, g, t, calc_ratio(g,t)
 
 def bin_radii(r, rd, g, t, min, max):
     within_interval = np.where( (r>min)*(r<max) )
@@ -70,8 +65,10 @@ def main():
 
     radius, rel_dist, green, texas, ratio = collect_data(data_sets)
 
-    r_bins      = np.around(np.linspace(50, np.max(radius), 20 )).astype(int)
-    rd_bins     = np.arange(0,1.02, 0.02)
+    min_r = 0.3*np.max(radius)
+    max_r = np.max(radius)
+    r_bins  = np.around(np.linspace(min_r, max_r, int((max_r-min_r)/2))).astype(int)
+    rd_bins = np.arange(0,1.02, 0.02)
 
     _,_, g, g_std = bin_data(radius, rel_dist, green, r_bins, rd_bins)
     _,_, t, t_std = bin_data(radius, rel_dist, texas, r_bins, rd_bins)
