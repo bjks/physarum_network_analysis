@@ -42,9 +42,9 @@ def thick_skeleton(skeleton, times = 10):
 ############# Creating mask #########
 #####################################
 
-def create_mask(dye, sig, thresh, halo_sig=None):
+def create_mask(dye, sig, thresh, halo_sig):
     ### if halo_sig is given the local background is estimated and used for mask
-    if halo_sig != None:
+    if halo_sig != 0:
         halo = ndi.gaussian_filter(dye, sigma=halo_sig)
         mask = ndi.gaussian_filter(dye, sigma=sig)
         mask = np.where(mask > thresh * halo, 1., 0.)

@@ -40,7 +40,12 @@ def interpl_dye(raw1, raw2):
 ###############
 
 
+
+
 def main():
+    set_keyword = os.sys.argv[1]
+    data_sets = [data(set_keyword, i, method='inter_mean', color='green') for i in range(data(set_keyword).first, data(set_keyword).last)]
+    
 
     # r = np.linspace(0, 1, 1000)
     # plt.plot(r, wall_height(1, r, 0.1))
@@ -92,14 +97,14 @@ def main():
 
     #
     #
-    n= 100
-    a = [np.arange(0,n) for i in range(n)]
-    a = np.transpose(np.array(a))
-    x = -np.cos(a+0.5)
-    y = np.cos(a)
-    plt.imshow(x)
-    plt.show()
-    fft_kymo(x)
+    # n= 100
+    # a = [np.arange(0,n) for i in range(n)]
+    # a = np.transpose(np.array(a))
+    # x = -np.cos(a+0.5)
+    # y = np.cos(a)
+    # plt.imshow(x)
+    # plt.show()
+    # fft_kymo(x)
 
     # phase_corr(x, y, 'x', 'y', 2, 'y_before_x', 'start', None, detrending='gauss', upsample=10, show=True)
 
