@@ -72,16 +72,28 @@ class data(data_paths):
         self.method         = method
         self.color          = color
 
+
+        # read params
         self.path           = params.get('path')
         self.subdir         = params.get('subdir', None)
-        self.sigma          = float(params.get('sigma', 5.))
-        self.threshold      = float(params.get('thresh_spots', 1.3))
-        self.halo_sig       = float(params.get('halo_sig', 0))
-        self.thresh_spots   = float(params.get('thresh_spots', 5.))
-        self.spots_sig      = float(params.get('spots_sig', 10))
 
-        self.first          = int(params.get('first', 1))
-        self.last           = int(params.get('last'))
+        # sigma of gaussian_filter and threshold that is used in mask
+        self.sigma          = params.getfloat('sigma', 5.)
+        self.threshold      = params.getfloat('threshold', 1.3)
+
+        # sigma that is used for halo substraction to improve mask
+        self.halo_sig       = params.getfloat('halo_sig', None)
+
+        # radius that is used in disk_filter and threshold to remove spots
+        self.spots_radius   = params.getfloat('spots_radius', 10)
+        self.thresh_spots   = params.getfloat('thresh_spots', 5.)
+
+        # number of conncted areas that are interpreted as networks
+        # '1' keeps only the largest area, None (default) does not change the mask 
+        self.extract        = params.getint('extract', None)
+
+        self.first          = params.getint('first', 1)
+        self.last           = params.getint('last')
 
         self.seed_positions = json.loads(params.get('seed_positions'))
 
@@ -89,5 +101,5 @@ class data(data_paths):
         texas               = params.get('texas', '')
         green               = params.get('green', '')
         bf                  = params.get('bf', '')
-        zeros               = int(params.get('zeros', 3))
+        zeros               = params.getint('zeros', 3)
         super(data, self).__init__(image_prefix, no, zeros, texas, green, bf)

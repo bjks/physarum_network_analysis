@@ -44,8 +44,22 @@ def interpl_dye(raw1, raw2):
 
 def main():
     set_keyword = os.sys.argv[1]
-    data_sets = [data(set_keyword, i, method='inter_mean', color='green') for i in range(data(set_keyword).first, data(set_keyword).last)]
-    
+    data_sets = [data(set_keyword, i, method='inter_mean', color='tg') for i in range(data(set_keyword).first, data(set_keyword).last)]
+
+    set = data_sets[0]
+
+
+    green = read_file(set.file_raw1)
+    texas = read_file(set.file_raw2)
+
+    ### mask, spots removal ###
+
+
+    mask = create_mask(texas, set.sigma, set.threshold, set.halo_sig)
+
+    mask = extract_nerwork(mask, set.extract)
+    plt.imshow(mask)
+    plt.show()
 
     # r = np.linspace(0, 1, 1000)
     # plt.plot(r, wall_height(1, r, 0.1))

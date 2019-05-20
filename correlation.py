@@ -9,7 +9,7 @@ from analysis.plotting import *
 from skimage.feature import register_translation
 import os
 
-def detrend(kymo, r):
+def gauss_detrend(kymo, r):
     global_structs = ndi.gaussian_filter(kymo, sigma=r)
     return kymo - global_structs
 
@@ -69,22 +69,9 @@ def temporal_correlation(kymo1, kymo2, max_delta, label, path_name):
     return np.arange(-max_delta,max_delta+1), correlation
 
 ##########################################################################################
-def wall_height(R, r, d):
-    R1 = R - d
-    hw = np.where(r < R1, np.sqrt(R**2 - r**2) - np.sqrt(R1**2 - r**2), np.sqrt(R**2 - r**2))
-    return hw
 
-def disk_mean_num(R, d):
-    r = np.arange(0, R, 0.1)
-    mean = np.sum(wall_height(R,r,d))/R**2
-    return mean
 
-def norm_with_model(radii, d):
-    radii_f = radii.flatten()
-    mean = np.zeros_like(radii_f)
-    for i in range(0, len(radii_f)):
-        mean[i] = disk_mean_num(radii_f[i], d)
-    return mean.reshape(np.shape(radii))
+
 
 ######################## PHASE CORR ###########################
 def phase_corr(kymo1, kymo2,
@@ -98,15 +85,11 @@ def phase_corr(kymo1, kymo2,
     squared_kymo2 = np.transpose(crop_aligned_kymo(kymo2))
 
     if detrending == 'gauss':
-        squared_kymo1 = detrend(squared_kymo1, 40)
-        squared_kymo2 = detrend(squared_kymo2, 40)
+        squared_kymo1 = gauss_detrend(squared_kymo1, 40)
+        squared_kymo2 = guass_detrend(squared_kymo2, 40)
     elif detrending == 'mean':
         squared_kymo1 -= np.mean(squared_kymo1)
         squared_kymo2 -= np.mean(squared_kymo2)
-    elif detrending == 'model':
-        squared_kymo2 /=norm_with_model(squared_kymo1, 20)
-        squared_kymo1 = detrend(squared_kymo1, 40)
-        squared_kymo2 = detrend(squared_kymo2, 40)
     elif detrending == 'radius':
         squared_kymo2/= (squared_kymo1)
         squared_kymo1 = detrend(squared_kymo1, 30)
@@ -120,8 +103,8 @@ def phase_corr(kymo1, kymo2,
 
     r = ax.imshow(squared_kymo1)
     cbar = plt.colorbar(r)
-    # cbar.set_label('radius deviations (pixel)', rotation=270)
-    plt.savefig(path_name + 'branch' + str(label) + '_' + title1 +  'detrend.pdf', dpi=600)
+    cbar.set_label('radius deviations (pixel)', rotation=270)
+    plt.savefig(path_name + 'branch' + str(label) + '_' + title1 + '_' +detrending + '.pdf', dpi=600)
     plt.close()
 
     fig, ax = plt.subplots(1,1, figsize=(4,4))
@@ -130,15 +113,15 @@ def phase_corr(kymo1, kymo2,
     ax.set_ylabel("space (pixel)")
     c = ax.imshow(squared_kymo2)
     cbar = plt.colorbar(c)
-    # cbar.set_label('concentration (a.u.)', rotation=270)
+    cbar.set_label('concentration (a.u.)', rotation=270)
 
-    plt.savefig(path_name + 'branch' + str(label) + '_' + title2 +  'detrend.pdf', dpi=600)
+    plt.savefig(path_name + 'branch' + str(label) + '_' + title2 + '_' +detrending + '.pdf', dpi=600)
     plt.close()
     ######
 
     #### correlation
-    squared_kymo1 = ndi.zoom(squared_kymo1, upsample, order=2)
-    squared_kymo2 = ndi.zoom(squared_kymo2, upsample, order=2)
+    squared_kymo1 = ndi.zoom(squared_kymo1, upsample, order=5)
+    squared_kymo2 = ndi.zoom(squared_kymo2, upsample, order=5)
     image_product = np.fft.fft2(squared_kymo1) * np.fft.fft2(squared_kymo2).conj()
     cc_image = np.fft.ifft2(image_product)
 
@@ -158,9 +141,7 @@ def phase_corr(kymo1, kymo2,
     max = np.argmax(unshifted_correlation[0])
     min = np.argmin(unshifted_correlation[0])
     print('Max: ', max/upsample, 'Min: ', min/upsample)
-    print(min, t_range/2)
     if min > t_range/2:
-        print(min)
         min -= t_range
     if max > t_range/2:
         max -= t_range
@@ -179,7 +160,6 @@ def phase_corr(kymo1, kymo2,
     if show:
         plt.show()
     plt.close()
-    print('Done')
 
 def correlate_the2(kymos, quan1, quan2, title1, title2, align_keyword, label,
                    path_name, detrending='gauss', show=False, upsample=1):
@@ -197,22 +177,30 @@ def correlate_the2(kymos, quan1, quan2, title1, title2, align_keyword, label,
 
 def main():
     set_keyword     = os.sys.argv[1]
-    label           = int(os.sys.argv[2])
+    color           = os.sys.argv[2]
 
     align_keyword   = 'reference_point'
     method          = 'inter_mean'
 
-    for order in ['green']:
-        set     = data(set_keyword, method=method, color=order)
 
-        kymos = np.load(set.file_dat_set + '_branch_' + str(label) + '.npz')
-        path_name = set.file_plot_set + '_branch_' + str(label) + '/'
-        if not os.path.exists(path_name):
-            os.mkdir(path_name)
+    if color.strip() == 'both':
+        colors = ['tg', 'gt']
+    else:
+        colors = [color]
 
-        correlate_the2(kymos, 'kymograph_local_radii', 'kymograph_concentration',
-                       'radius', 'Ca-concentration',
-                       align_keyword, label, path_name, upsample=10, detrending='radius', show=False)
+    labels = range(len(data(set_keyword).seed_positions))
+    print(labels[-1])
+    for order in colors:
+        for label in labels:
+            set     = data(set_keyword, method=method, color=order)
+            kymos = np.load(set.file_dat_set + '_branch_' + str(label) + '.npz')
+            path_name = set.file_plot_set + '_branch_' + str(label) + '/'
+            if not os.path.exists(path_name):
+                os.mkdir(path_name)
+
+            correlate_the2(kymos, 'kymograph_local_radii', 'kymograph_concentration',
+                           'radius', 'Ca-concentration',
+                           align_keyword, label, path_name, upsample=5, detrending='gauss', show=False)
     #
     # correlate_the2(kymos, 'kymograph_inner', 'kymograph_outer',
     #                'inner-Ca', 'outer-Ca',

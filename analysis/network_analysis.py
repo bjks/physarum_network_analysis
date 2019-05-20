@@ -44,7 +44,7 @@ def thick_skeleton(skeleton, times = 10):
 
 def create_mask(dye, sig, thresh, halo_sig):
     ### if halo_sig is given the local background is estimated and used for mask
-    if halo_sig != 0:
+    if halo_sig != None:
         halo = ndi.gaussian_filter(dye, sigma=halo_sig)
         mask = ndi.gaussian_filter(dye, sigma=sig)
         mask = np.where(mask > thresh * halo, 1., 0.)
@@ -54,13 +54,18 @@ def create_mask(dye, sig, thresh, halo_sig):
         mask = np.where(mask > thresh*(np.mean(dye)), 1., 0.)
     return mask
 
-def extract_nerwork(mask):
-    # returns mask that contains only the largest connected area
+def extract_nerwork(mask, n):
+    if n == None:
+        return mask
+        
+    # returns mask that contains only the n largest connected areas
     labels = morph.label(mask, connectivity=2)
     regions = regionprops(labels)
 
-    label_max = regions[np.argmax([r.area for r in regions])].label
-    return np.where(labels == label_max, 1., 0.)
+    areas = np.argsort([r.area for r in regions])
+    selected_labels = [regions[a].label for a in areas[-n:]]
+
+    return np.where(np.isin(labels, selected_labels), 1., 0.)
 
 #####################################
 ######## image interpolation ########

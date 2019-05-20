@@ -17,11 +17,11 @@ def process_ratiometric(set, use_ref_for_mask = True):
     else:
         mask = create_mask(green, set.sigma, set.threshold, set.halo_sig)
 
-    mask = extract_nerwork(mask)
+    mask = extract_nerwork(mask, set.extract)
 
     green_clean     = np.multiply(green, mask)
     texas_clean     = np.multiply(texas, mask)
-    spots_mask, green_spotless     = remove_spots(green_clean, mask, set.spots_sig, set.thresh_spots)
+    spots_mask, green_spotless     = remove_spots(green_clean, mask, set.spots_radius, set.thresh_spots)
 
     ### skeleton, radii ###
     skeleton                       = extract_skeleton(mask)
