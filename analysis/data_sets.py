@@ -62,7 +62,7 @@ import configparser
 import json
 
 class data(data_paths):
-    def __init__(self, file_name, no=1, method='inter_mean', color='tg'):
+    def __init__(self, file_name, no=1, method='', color='tg'):
 
         config = configparser.ConfigParser()
         config_file = 'config/' + file_name + '.ini'
@@ -70,12 +70,13 @@ class data(data_paths):
         params = config['params']
 
         self.method         = method
-        self.color          = color
 
 
         # read params
         self.path           = params.get('path')
         self.subdir         = params.get('subdir', None)
+        self.color          = params.get('color', color)
+
 
         # sigma of gaussian_filter and threshold that is used in mask
         self.sigma          = params.getfloat('sigma', 5.)
@@ -89,8 +90,9 @@ class data(data_paths):
         self.thresh_spots   = params.getfloat('thresh_spots', 5.)
 
         # number of conncted areas that are interpreted as networks
-        # '1' keeps only the largest area, None (default) does not change the mask 
+        # '1' keeps only the largest area, None (default) does not change the mask
         self.extract        = params.getint('extract', None)
+        self.lower_thresh   = params.getfloat('lower_thresh', None)
 
         self.first          = params.getint('first', 1)
         self.last           = params.getint('last')

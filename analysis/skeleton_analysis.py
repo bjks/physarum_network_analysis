@@ -92,7 +92,7 @@ def follow_all_paths(selected_branches, last_endpoint):
 
 
 def extract_branch(file_dat, seed_position, quantities):
-
+    # selects branch based on seed_position
     skeleton        = np.load(file_dat + '.npz')['skeleton'].astype(int)
     seed_position   = closest_point_in_skel(seed_position, skeleton)
     branches        = label_branches(skeleton)
@@ -102,7 +102,6 @@ def extract_branch(file_dat, seed_position, quantities):
     values_in_branch = []
     for q in quantities:
         values_in_branch.append(np.load(file_dat + '.npz')[q].astype(float) * selected_branch)
-
 
     return values_in_branch, seed_position, skeleton, label
 
@@ -135,7 +134,7 @@ def process_skeleton(data_sets, seed_position, label):
         kymograph_concentration.append(along_path[1])
         kymograph_inner.append(along_path[2])
         kymograph_outer.append(along_path[3])
-        ##### use first set as reference point ####
+        ##### use first set as reference point: ####
         if set == data_sets[0]:
             alignment.append(int(len(path_coords)/2))
             reference_point = path_coords[int(len(path_coords)/2)]
@@ -172,5 +171,5 @@ def process_skeleton(data_sets, seed_position, label):
     plot_kymos(kymograph_local_radii, kymograph_concentration, 'radii', 'concentration',
                label, path_name, 'reference_point', alignment)
 
-    # plot_kymos(kymograph_inner, kymograph_outer, 'innner', 'outer',
-    #            label, path_name, 'reference_point', alignment)
+    plot_kymos(kymograph_inner, kymograph_outer, 'innner', 'outer',
+               label, path_name, 'reference_point', alignment)

@@ -11,11 +11,20 @@ def process_ratiometric(set, use_ref_for_mask = True):
     green = read_file(set.file_raw1)
     texas = read_file(set.file_raw2)
 
-    ### mask, spots removal ###
+    green = background_correction(green, set.file_raw, set.sigma,
+                                  set.halo_sig, set.lower_thresh)
+
+    texas = background_correction(texas, set.file_raw, set.sigma,
+                                  set.halo_sig, set.lower_thresh)
+
+    plt.imshow(green)
+    plt.show()
+
     if use_ref_for_mask:
         mask = create_mask(texas, set.sigma, set.threshold, set.halo_sig)
     else:
         mask = create_mask(green, set.sigma, set.threshold, set.halo_sig)
+
 
     mask = extract_nerwork(mask, set.extract)
 
@@ -28,6 +37,7 @@ def process_ratiometric(set, use_ref_for_mask = True):
     local_radii                    = extract_radii(mask, skeleton)
 
     ratio                          = calc_ratio(green_spotless, texas_clean)
+
 
     ### projection methods ###
     if set.method == 'disk_mean':

@@ -15,17 +15,17 @@ from scipy.signal import find_peaks
 
 def fft_kymo(kymo):
     squared_kymo = crop_aligned_kymo(kymo)
-    squared_kymo = detrend(squared_kymo, 40)
+    squared_kymo = gauss_detrend(squared_kymo, 40)
     kymo_f = np.fft.fft2(squared_kymo)
     # real = ndi.gaussian_filter(real, sigma=1)
 
     # real = np.fft.fftshift(kymo_f).real
-    plt.imshow(np.transpose(squared_kymo))
+    plt.imshow(np.transpose(kymo_f.real))
     plt.show()
 
 def power_spec(kymo1, kymo2, label, path_name):
     squared_kymo1_T = np.transpose(crop_aligned_kymo(kymo1))
-    squared_kymo1_T = detrend(squared_kymo1_T, 40)
+    squared_kymo1_T = gauss_detrend(squared_kymo1_T, 40)
 
     squared_kymo2_T = np.transpose(crop_aligned_kymo(kymo2))
     squared_kymo2_T = detrend(squared_kymo2_T, 40)

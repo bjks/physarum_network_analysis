@@ -5,9 +5,6 @@ import os
 from analysis.plotting import *
 from multiprocessing.dummy import Pool as ThreadPool
 
-def invert_bf(image):
-    return - image + np.max(image)
-
 
 def process_network(set):
 

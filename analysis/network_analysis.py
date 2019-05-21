@@ -1,22 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-import sys
-
-from skimage.feature import peak_local_max
-import skimage.morphology as morph
-import skimage.filters.rank as rank
-from skimage.measure import regionprops
+import skimage.morphology as morph              # skeleton
+from skimage.measure import regionprops         # extract_nerwork
 
 
-from scipy import ndimage as ndi
-from scipy import LowLevelCallable
-from scipy.ndimage.filters import generic_filter
-
-
-import numba
-from numba import cfunc, carray
-from numba.types import intc, CPointer, float64, intp, voidptr
+from scipy import ndimage as ndi                    # gaussian_filter
+from astropy.convolution import convolve_fft
 
 ############ File reading ########
 def greyscale(image):
@@ -28,6 +18,9 @@ def read_file(filename):
         return greyscale(image)
     else:
         return image
+
+def invert_bf(image):
+    return - image + np.max(image)
 
 ### create diluted skeleton and masks the background for plotting ###
 def thick_skeleton(skeleton, times = 10):
@@ -41,6 +34,8 @@ def thick_skeleton(skeleton, times = 10):
 #####################################
 ############# Creating mask #########
 #####################################
+# mask consists of doubles to avoid stupid buck in the future,
+# although it costs some storage...
 
 def create_mask(dye, sig, thresh, halo_sig):
     ### if halo_sig is given the local background is estimated and used for mask
@@ -57,12 +52,13 @@ def create_mask(dye, sig, thresh, halo_sig):
 def extract_nerwork(mask, n):
     if n == None:
         return mask
-        
+
     # returns mask that contains only the n largest connected areas
     labels = morph.label(mask, connectivity=2)
     regions = regionprops(labels)
 
     areas = np.argsort([r.area for r in regions])
+    #list of labels of the n largest areas
     selected_labels = [regions[a].label for a in areas[-n:]]
 
     return np.where(np.isin(labels, selected_labels), 1., 0.)
@@ -109,33 +105,15 @@ def extract_radii(mask, skeleton):
 
 #########################################################################
 ########## replace spots with estim. background, based on nearby pixels #
-#                           jit stuff is just for performance   #########
-#########################################################################
-
-# speeding up generic filter
-def jit_filter_function(filter_function):
-    jitted_function = numba.jit(filter_function, nopython=True)
-    @cfunc(intc(CPointer(float64), intp, CPointer(float64), voidptr))
-    def wrapped(values_ptr, len_values, result, data):
-        values = carray(values_ptr, (len_values,), dtype=float64)
-        result[0] = jitted_function(values)
-        return 1
-    return LowLevelCallable(wrapped.ctypes)
-
-@jit_filter_function
-def nan_mean(values):
-    return np.nanmean(values)
-###
 
 def disk_filter(dye, mask, r):
-    # returns average within disk around pixel, only pixels in mask contribute
-    dye_filtered = np.where(mask!=0, dye, np.nan) # 0 -> NaN (to be ignored in nanmean)
-    selem        = morph.disk(r)
+    dye_filtered = np.where(mask!=0, dye, np.nan) # 0 -> NaN (to be ignored)
 
-    dye_filtered = generic_filter(dye_filtered, nan_mean, footprint=selem,
-                                  mode='constant', cval=np.nan)
+    kernel = morph.disk(r)
+    dye_filtered = convolve_fft(dye_filtered, kernel, fill_value=np.nan)
 
     return np.nan_to_num(dye_filtered) # NaN -> 0
+
 
 def remove_spots(dye, mask, spots_sig, thresh_spots):
     #### calculate background ####
@@ -151,13 +129,44 @@ def remove_spots(dye, mask, spots_sig, thresh_spots):
 
     return spots_mask, dye_spotless
 
+################################################
+############ background_correction #############
+################################################
 
+def estimate_background(dye, sigma, threshold, halo_sig, invert=False):
+
+    if invert:
+        mask = create_mask(invert_bf(dye), sigma, threshold, halo_sig)
+    else:
+        mask = create_mask(dye, sigma, threshold, halo_sig)
+
+    mask_inv    = np.where(mask==1., 0, 1)
+
+    estim_back  = disk_filter(dye, mask_inv, halo_sig)
+    return estim_back
+
+
+def background_correction(dye, file_raw, sigma, halo_sig, lower_thresh):
+    if lower_thresh == None:
+        return dye
+
+    bf          = read_file(file_raw)
+
+    back_bf     = estimate_background(bf, sigma, lower_thresh, halo_sig, invert=True)
+    back_dye    = estimate_background(dye, sigma, lower_thresh, halo_sig)
+
+    added_back  = calc_ratio(bf, back_bf) * back_dye
+    plt.imshow(added_back)
+    plt.show()
+    corrected_dye = dye - added_back
+    return corrected_dye
 
 #####################################
-########## intensity calcs #########
+############ ratio calc #############
 #####################################
 
 def calc_ratio(dye, ref):
+    # ratio between two arrays, returns zeros where denominator == 0
     return np.true_divide(dye, ref, out=np.zeros_like(dye), where=ref!=0)
 
 #####################################
@@ -194,7 +203,9 @@ def absolute_distance(skeleton, mask):
     return distance
 
 
+
 def circle_mean(dye, skeleton, mask, local_radii):
+    ###### 'sliding disk' #####
     cx = np.arange(0, dye.shape[1])
     cy = np.arange(0, dye.shape[0])
 
@@ -225,6 +236,7 @@ def circle_mean(dye, skeleton, mask, local_radii):
 
 def project_on_skeleton(dye, skeleton):
     ### orth. projection on skeleton by finding the nearest point in skeleton
+    ### only a few points are average, thus the results are noisy
     intensity   = np.zeros_like(dye)
     no          = np.zeros_like(dye)
 
@@ -241,13 +253,17 @@ def project_on_skeleton(dye, skeleton):
             intensity[inds0[i]][inds1[i]] += dye_f[i]
             no[inds0[i]][inds1[i]]+=1
 
-    concentration = np.true_divide(intensity, no, out=np.zeros_like(no), where=intensity!=0)
+    concentration = np.true_divide(intensity, no, out=np.zeros_like(no),
+                                   where=intensity!=0)
     return concentration
+
 
 
 def inter_mean(dye, skeleton, mask, local_radii, interval_size = 10):
     ### orth. projection on skeleton by finding the nearest point in skeleton
-    # + average over nearest pixel in skeleton within r <= ~ 10 or so
+    ### + average over nearest pixel in skeleton within interval <= 10 pixel
+    ### allow enough pixel to be considered such that "inner" "outer" can be returned
+
     intensity_inner = np.zeros_like(dye)
     intensity_outer = np.zeros_like(dye)
     no_inner        = np.zeros_like(dye)
@@ -277,17 +293,19 @@ def inter_mean(dye, skeleton, mask, local_radii, interval_size = 10):
     no = no_inner + no_outer
 
     concentration = np.true_divide(intensity, no,
-                                   out=np.zeros_like(dye), where=intensity!=0)
+                                   out=np.zeros_like(dye),
+                                   where=intensity!=0)
 
     concentration_inner = np.true_divide(intensity_inner, no_inner,
-                                         out=np.zeros_like(dye), where=intensity_inner!=0)
+                                         out=np.zeros_like(dye),
+                                         where=intensity_inner!=0)
 
     concentration_outer = np.true_divide(intensity_outer, no_outer,
-                                         out=np.zeros_like(dye), where=intensity_outer!=0)
+                                         out=np.zeros_like(dye),
+                                         where=intensity_outer!=0)
 
     concentration         = disk_filter(concentration, concentration, interval_size) * skeleton
     concentration_inner   = disk_filter(concentration_inner, concentration, interval_size) * skeleton
     concentration_inner   = disk_filter(concentration_outer, concentration, interval_size) * skeleton
-
 
     return concentration, concentration_inner, concentration_outer
