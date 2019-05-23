@@ -31,6 +31,10 @@ def thick_skeleton(skeleton, times = 10):
     thick_skeleton = np.ma.masked_where(thick_skeleton == 0, thick_skeleton)
     return thick_skeleton
 
+def show_im(image):
+    plt.imshow(image)
+    plt.show()
+
 #####################################
 ############# Creating mask #########
 #####################################
@@ -133,33 +137,29 @@ def remove_spots(dye, mask, spots_sig, thresh_spots):
 ############ background_correction #############
 ################################################
 
-def estimate_background(dye, sigma, threshold, halo_sig, invert=False):
-
-    if invert:
-        mask = create_mask(invert_bf(dye), sigma, threshold, halo_sig)
-    else:
-        mask = create_mask(dye, sigma, threshold, halo_sig)
-
+def estimate_background(dye, mask, halo_sig):
     mask_inv    = np.where(mask==1., 0, 1)
 
     estim_back  = disk_filter(dye, mask_inv, halo_sig)
     return estim_back
 
 
-def background_correction(dye, file_raw, sigma, halo_sig, lower_thresh):
+def background_correction(dye, file_raw, sigma, lower_thresh, halo_sig):
+
     if lower_thresh == None:
         return dye
 
     bf          = read_file(file_raw)
 
-    back_bf     = estimate_background(bf, sigma, lower_thresh, halo_sig, invert=True)
-    back_dye    = estimate_background(dye, sigma, lower_thresh, halo_sig)
+    mask_bf     = create_mask(invert_bf(bf), sigma, lower_thresh, halo_sig)
+
+    back_bf     = estimate_background(bf, mask_bf, halo_sig)
+    back_dye    = estimate_background(dye, mask_bf, halo_sig)
 
     added_back  = calc_ratio(bf, back_bf) * back_dye
-    plt.imshow(added_back)
-    plt.show()
     corrected_dye = dye - added_back
-    return corrected_dye
+    return np.where(corrected_dye < 0, 0, corrected_dye)
+    # return corrected_dye
 
 #####################################
 ############ ratio calc #############

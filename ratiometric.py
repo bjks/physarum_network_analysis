@@ -11,20 +11,17 @@ def process_ratiometric(set, use_ref_for_mask = True):
     green = read_file(set.file_raw1)
     texas = read_file(set.file_raw2)
 
+
     green = background_correction(green, set.file_raw, set.sigma,
-                                  set.halo_sig, set.lower_thresh)
+                                  set.lower_thresh, set.halo_sig)
 
     texas = background_correction(texas, set.file_raw, set.sigma,
-                                  set.halo_sig, set.lower_thresh)
-
-    plt.imshow(green)
-    plt.show()
+                                  set.lower_thresh, set.halo_sig)
 
     if use_ref_for_mask:
         mask = create_mask(texas, set.sigma, set.threshold, set.halo_sig)
     else:
         mask = create_mask(green, set.sigma, set.threshold, set.halo_sig)
-
 
     mask = extract_nerwork(mask, set.extract)
 
@@ -69,7 +66,7 @@ def main(): ## python3 ratiometric.py <keyword> <first> <last(+1)>
     method  = 'inter_mean'
 
 ##### green(i) texas(i+0.5), texas(i-0.5) green(i) ####
-    for order in ['gt', 'tg']:
+    for order in ['tg', 'gt']:
         data_sets = [data(set_keyword, i, method, color=order) for i in range( int(os.sys.argv[2]),int(os.sys.argv[3]) )]
 
         for set in data_sets:
