@@ -33,6 +33,7 @@ def thick_skeleton(skeleton, times = 10):
 
 def show_im(image):
     plt.imshow(image)
+    plt.colorbar()
     plt.show()
 
 #####################################
@@ -68,9 +69,11 @@ def extract_nerwork(mask, n):
     return np.where(np.isin(labels, selected_labels), 1., 0.)
 
 #####################################
-######## image interpolation ########
+######## image interpolation #######
+#?########## discontinued ?##########
 #####################################
 def interpl_masks(mask1, mask2):
+    # finds outline in the center between the outlines of two maskss
     mask1 = mask1.astype(bool)
     mask2 = mask2.astype(bool)
 
@@ -104,7 +107,7 @@ def extract_skeleton(mask):
 
 def extract_radii(mask, skeleton):
     distance = ndi.distance_transform_edt(mask)
-    local_radii = distance * skeleton
+    local_radii = distance * skeleton # only keeps pixel in skeleton
     return local_radii
 
 #########################################################################
@@ -124,7 +127,7 @@ def remove_spots(dye, mask, spots_sig, thresh_spots):
     selem        = morph.disk(spots_sig)
     background   = disk_filter(dye, mask, spots_sig)
 
-    #### calculate mask ####
+    #### calculate mask withou spots ####
     spots_mask   = np.where(dye < thresh_spots * background, 1., 0.) * mask
 
     #### replace spots with estimated background ###
@@ -153,13 +156,25 @@ def background_correction(dye, file_raw, sigma, lower_thresh, halo_sig):
 
     mask_bf     = create_mask(invert_bf(bf), sigma, lower_thresh, halo_sig)
 
+    # estimate background of bf and dye
     back_bf     = estimate_background(bf, mask_bf, halo_sig)
     back_dye    = estimate_background(dye, mask_bf, halo_sig)
 
+    # based on the assumption:
+    # background (ligth below tube) / background that reaches the cam is constant
+    # ie not dependend on the intensity and the wavelength
+    # -> I_b,bf / I^0_b,bf * I^0_b, green = I_b,green
     added_back  = calc_ratio(bf, back_bf) * back_dye
+    show_im(mask_bf)
+    show_im(back_bf)
+    show_im(back_dye)
+    show_im(added_back)
+
+    # tube signal = signal - background contribution
     corrected_dye = dye - added_back
+    # necessary, otherwise negative values mess with mask
+    # (not problematic, since it only concerns pixel outside network)
     return np.where(corrected_dye < 0, 0, corrected_dye)
-    # return corrected_dye
 
 #####################################
 ############ ratio calc #############
@@ -195,7 +210,7 @@ def relative_distance(skeleton, mask, local_radii):
                                           return_distances=True, return_indices=False)
     distance *= mask
     radii = tube_radius_at_point(mask, skeleton, local_radii)
-    return np.true_divide(distance, radii, out=np.zeros_like(radii), where=radii!=0)
+    return np.true_divide(distance, radii, out=np.zeros_like(radii), where=radii!=0), radii
 
 def absolute_distance(skeleton, mask):
     distance = ndi.distance_transform_edt(np.invert(skeleton.astype(bool)),
@@ -204,13 +219,13 @@ def absolute_distance(skeleton, mask):
 
 
 
-def circle_mean(dye, skeleton, mask, local_radii):
+def circle_mean(dye, skeleton, mask, local_radii, relative_dist):
     ###### 'sliding disk' #####
     cx = np.arange(0, dye.shape[1])
     cy = np.arange(0, dye.shape[0])
 
     #### calc realtive distance (r/R) to skeleton at every position
-    relative_dist = relative_distance(skeleton, mask, local_radii)
+    # relative_dist, radii = relative_distance(skeleton, mask, local_radii)
 
     ### seperate outer and inner of network based on relative_dist
     dye_inner = np.where(relative_dist <= 0.6, dye, 0)
@@ -231,7 +246,11 @@ def circle_mean(dye, skeleton, mask, local_radii):
         concentration_inner[y][x] = np.sum(disk * dye_inner) / np.sum(disk * dye_inner.astype(bool))
         concentration_outer[y][x] = np.sum(disk * dye_outer) / np.sum(disk * dye_outer.astype(bool))
 
-    return concentration, concentration_inner, concentration_outer
+    return  concentration, \
+            concentration_inner, \
+            concentration_outer
+            # relative_dist, \
+            # radii
 
 
 def project_on_skeleton(dye, skeleton):
@@ -259,7 +278,7 @@ def project_on_skeleton(dye, skeleton):
 
 
 
-def inter_mean(dye, skeleton, mask, local_radii, interval_size = 10):
+def inter_mean(dye, skeleton, mask, local_radii, relative_dist, interval_size = 10):
     ### orth. projection on skeleton by finding the nearest point in skeleton
     ### + average over nearest pixel in skeleton within interval <= 10 pixel
     ### allow enough pixel to be considered such that "inner" "outer" can be returned
@@ -269,7 +288,7 @@ def inter_mean(dye, skeleton, mask, local_radii, interval_size = 10):
     no_inner        = np.zeros_like(dye)
     no_outer        = np.zeros_like(dye)
 
-    relative_dist = relative_distance(skeleton, mask, local_radii)
+    # relative_dist, radii = relative_distance(skeleton, mask, local_radii)
 
     inds = ndi.distance_transform_edt(np.invert(skeleton.astype(bool)),
                                       return_distances=False, return_indices=True)
@@ -308,4 +327,6 @@ def inter_mean(dye, skeleton, mask, local_radii, interval_size = 10):
     concentration_inner   = disk_filter(concentration_inner, concentration, interval_size) * skeleton
     concentration_inner   = disk_filter(concentration_outer, concentration, interval_size) * skeleton
 
-    return concentration, concentration_inner, concentration_outer
+    return  concentration, \
+            concentration_inner, \
+            concentration_outer

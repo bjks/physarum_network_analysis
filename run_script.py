@@ -122,8 +122,10 @@ def run_skeleton():
 #############################################
 
 def run_correlation():
-    com  =  'qsub -v NAME=' +  os.sys.argv[2] + \
-                     ',COL=' + os.sys.argv[3] + to_qsub + 'qsub_correlation.sh'
+    com  =  'qsub -v NAME='     + os.sys.argv[2] + \
+                     ',COL='    + os.sys.argv[3] + \
+                     ',NO='     + os.sys.argv[4] + \
+                      to_qsub + 'qsub_correlation.sh'
 
     print(com)
     if sys.platform.startswith('linux'):

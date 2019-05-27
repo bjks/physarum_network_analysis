@@ -17,8 +17,8 @@ def main(): ## python3 skeleton.py <keyword> <seed index (0,...)>
     method = 'inter_mean'
 
     set_keyword = os.sys.argv[1]
-    color =  str(os.sys.argv[2])
-    label = int(os.sys.argv[3])
+    color =   str(os.sys.argv[2])
+    label =   int(os.sys.argv[3])
     seed_position = data(set_keyword).seed_positions[label]
     if color == 'both':
         colors = ['tg', 'gt']

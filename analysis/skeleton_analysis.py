@@ -53,6 +53,7 @@ def next_pixel(seed, skel):
         return None
 
 def find_branch_endpoints(branch, last_endpoint):
+    # finds endpoint of branch that is closest to the point 'last_endpoint'
     _, ends = node_detection(branch)
     coords_ends = np.transpose(np.nonzero(ends))
     dists = np.sum((coords_ends-last_endpoint)**2, axis=1)
@@ -60,6 +61,7 @@ def find_branch_endpoints(branch, last_endpoint):
 
 
 def follow_path(selected_branch, last_endpoint):
+    # relurns values along the branch
     branch = selected_branch.copy()
     path_coords = []
     path_vals   = []
@@ -74,6 +76,8 @@ def follow_path(selected_branch, last_endpoint):
     return path_vals, path_coords, last_endpoint
 
 def follow_all_paths(selected_branches, last_endpoint):
+    # relurns values along the path given by selected_branches
+    # for all values in eg. selected_branches = [color, pressure, temperatur]
     branches = copy.deepcopy(selected_branches)
     path_coords = []
     path_vals   = [ [] for b in branches ]

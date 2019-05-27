@@ -86,7 +86,7 @@ def phase_corr(kymo1, kymo2,
 
     if detrending == 'gauss':
         squared_kymo1 = gauss_detrend(squared_kymo1, 40)
-        squared_kymo2 = guass_detrend(squared_kymo2, 40)
+        squared_kymo2 = gauss_detrend(squared_kymo2, 40)
     elif detrending == 'mean':
         squared_kymo1 -= np.mean(squared_kymo1)
         squared_kymo2 -= np.mean(squared_kymo2)

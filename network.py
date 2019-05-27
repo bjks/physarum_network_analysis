@@ -20,22 +20,27 @@ def process_network(set):
     mask = extract_nerwork(mask, set.extract)
 
     network_clean = np.multiply(network, mask)
-    spots_mask, network_clean     = remove_spots(network_clean, mask, set.spots_radius, set.thresh_spots)
+
+    # spots_mask, network_clean     = remove_spots(network_clean, mask, set.spots_radius, set.thresh_spots)
 
     skeleton                       = extract_skeleton(mask)
     local_radii                    = extract_radii(mask, skeleton)
 
+    rel_dist, radii_map            = relative_distance(skeleton, mask, local_radii)
+
 
     if set.method == 'disk_mean':
-        concentration, concentration_inner, concentration_outer = circle_mean(network_clean, skeleton, mask, local_radii)
+        concentration, concentration_inner, concentration_outer = circle_mean(network_clean, skeleton, mask, local_radii, rel_dist)
 
     if set.method == 'inter_mean':
-        concentration, concentration_inner, concentration_outer = inter_mean(network_clean, skeleton, mask, local_radii)
+        concentration, concentration_inner, concentration_outer = inter_mean(network_clean, skeleton, mask, local_radii, rel_dist)
 
     np.savez_compressed(set.file_dat,   network_clean       = network_clean,
                                         skeleton            = skeleton,
                                         local_radii         = local_radii,
                                         mask                = mask,
+                                        rel_dist            = rel_dist,
+                                        radii_map           = radii_map,
                                         concentration       = concentration,
                                         concentration_inner = concentration_inner,
                                         concentration_outer = concentration_outer)

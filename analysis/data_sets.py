@@ -47,11 +47,18 @@ class data_paths:
         self.path_results   = '../results/'    + dir + '/'
         self.path_plots     = '../plots/'      + dir + '/'
 
-        self.file_dat       = self.path_results + self.core1    + '_' + self.method + '_' + self.color
-        self.file_dat_set   = self.path_results + 'kymographs' + '_' + self.method + '_' + self.color
+        full_file = self.core1   + '_' + self.method + '_' + self.color
+        set_file  = 'set'        + '_' + self.method + '_' + self.color
 
-        self.file_plot      = self.path_plots + self.core1 + '_' + self.method + '_' + self.color
-        self.file_plot_set  = self.path_plots + self.method + '_' + self.color
+        if self.lower_thresh != None:
+            full_file += '_back_corr'
+            set_file  += '_back_corr'
+
+        self.file_dat       = self.path_results + full_file
+        self.file_dat_set   = self.path_results + set_file
+
+        self.file_plot      = self.path_plots + full_file
+        self.file_plot_set  = self.path_plots + set_file
 
 
 

@@ -18,16 +18,11 @@ def collect_data(data_sets):
     for set in data_sets:
         print(set.file_dat)
 
-        green_clean = np.load(set.file_dat + '.npz')['green_clean']
-        texas_clean = np.load(set.file_dat + '.npz')['texas_clean']
-        mask        = np.load(set.file_dat + '.npz')['mask']
-        skeleton    = np.load(set.file_dat + '.npz')['skeleton']
-        local_radii = np.load(set.file_dat + '.npz')['local_radii']
-
-        # spots_mask, green_clean     = remove_spots(green_clean, mask, set.spots_sig, set.thresh_spots)
-
-        relative_dist = relative_distance(skeleton, mask, local_radii)
-        radius = tube_radius_at_point(mask, skeleton, local_radii)
+        green_clean     = np.load(set.file_dat + '.npz')['green_clean']
+        texas_clean     = np.load(set.file_dat + '.npz')['texas_clean']
+        relative_dist   = np.load(set.file_dat + '.npz')['rel_dist']
+        radius          = np.load(set.file_dat + '.npz')['radii_map']
+        mask            = np.load(set.file_dat + '.npz')['mask']
 
         dist_mask   = np.where((relative_dist<=1)*(mask!=0), 1, 0)
 
