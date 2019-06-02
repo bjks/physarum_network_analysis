@@ -92,8 +92,8 @@ def phase_corr(kymo1, kymo2,
         squared_kymo2 -= np.mean(squared_kymo2)
     elif detrending == 'radius':
         squared_kymo2/= (squared_kymo1)
-        squared_kymo1 = detrend(squared_kymo1, 30)
-        squared_kymo2 = detrend(squared_kymo2, 30)
+        squared_kymo1 = gauss_detrend(squared_kymo1, 30)
+        squared_kymo2 = gauss_detrend(squared_kymo2, 30)
 
     ######## plot kymos ######
     fig, ax = plt.subplots(1,1, figsize=(4,4))

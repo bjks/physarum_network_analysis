@@ -10,6 +10,7 @@ from timeit import default_timer as timer
 import os
 from scipy.ndimage.filters import generic_filter
 from fft_analysis import *
+from phase_hilbert import *
 
 from multiprocessing.dummy import Pool as ThreadPool
 
@@ -43,22 +44,55 @@ def interpl_dye(raw1, raw2):
 
 
 def main():
-    set_keyword = os.sys.argv[1]
-    data_sets = [data(set_keyword, i, method='inter_mean', color='tg') for i in range(data(set_keyword).first, data(set_keyword).last)]
+    # set_keyword = os.sys.argv[1]
+    # data_sets = [data(set_keyword, i, method='inter_mean', color='tg') for i in range(data(set_keyword).first, data(set_keyword).last)]
+    #
+    # set = data_sets[0]
+    #
+    #
+    # green = read_file(set.file_raw1)
+    # texas = read_file(set.file_raw2)
+    #
+    # ### mask, spots removal ###
+    #
+    #
+    # mask = create_mask(texas, set.sigma, set.threshold, set.halo_sig)
+    #
+    # mask = extract_nerwork(mask, set.extract)
+    # plt.imshow(mask)
+    # plt.show()
+    #
+    n= 1000
+    a = [np.arange(0,n) for i in range(100)]
+    t = np.transpose(0.001*np.array(a))
+    signal1 = chirp(t, 20.0, 10, 100.0)
+    signal1 = 1.0 + 0.5 * np.sin(2.0*np.pi*3.0*t)
 
-    set = data_sets[0]
+    signal2 = chirp(t, 20.0, 10, 100.0)
+    signal2 *= (1.0 + 0.5 * np.cos(2.0*np.pi*3.0*t) )
+
+    signal1 = kymo_prep(signal1)
+    signal2 = kymo_prep(signal2)
+
+    phase1, amp1 = extract_phase(signal1, return_amp=True)
+    phase2, amp2 = extract_phase(signal2, return_amp=True)
+
+    fig = plt.figure()
 
 
-    green = read_file(set.file_raw1)
-    texas = read_file(set.file_raw2)
+    ax0 = fig.add_subplot(311)
+    ax0.plot(np.mean(signal1, axis=0))
+    ax0.set_xlabel("time in seconds")
 
-    ### mask, spots removal ###
 
+    ax1 = fig.add_subplot(312)
+    ax1.plot(np.mean(amp1, axis=0))
+    ax1.set_xlabel("time in seconds")
 
-    mask = create_mask(texas, set.sigma, set.threshold, set.halo_sig)
+    ax2 = fig.add_subplot(313)
 
-    mask = extract_nerwork(mask, set.extract)
-    plt.imshow(mask)
+    ax2.plot(np.mean(phase1, axis=0))
+
     plt.show()
 
     # r = np.linspace(0, 1, 1000)

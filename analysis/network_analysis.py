@@ -22,6 +22,7 @@ def read_file(filename):
 def invert_bf(image):
     return - image + np.max(image)
 
+###### visualization tools ######
 ### create diluted skeleton and masks the background for plotting ###
 def thick_skeleton(skeleton, times = 10):
     selem = morph.disk(times)
@@ -165,10 +166,7 @@ def background_correction(dye, file_raw, sigma, lower_thresh, halo_sig):
     # ie not dependend on the intensity and the wavelength
     # -> I_b,bf / I^0_b,bf * I^0_b, green = I_b,green
     added_back  = calc_ratio(bf, back_bf) * back_dye
-    show_im(mask_bf)
-    show_im(back_bf)
-    show_im(back_dye)
-    show_im(added_back)
+
 
     # tube signal = signal - background contribution
     corrected_dye = dye - added_back
@@ -249,8 +247,7 @@ def circle_mean(dye, skeleton, mask, local_radii, relative_dist):
     return  concentration, \
             concentration_inner, \
             concentration_outer
-            # relative_dist, \
-            # radii
+
 
 
 def project_on_skeleton(dye, skeleton):
