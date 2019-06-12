@@ -57,8 +57,9 @@ class data_paths:
         self.file_dat       = self.path_results + full_file
         self.file_dat_set   = self.path_results + set_file
 
-        self.file_plot      = self.path_plots + full_file
-        self.file_plot_set  = self.path_plots + set_file
+        self.file_plot              = self.path_plots + full_file
+        self.file_plot_set          = self.path_plots + set_file
+        self.file_plot_tube_profile = self.path_plots + 'tube_profile/'+set_file
 
 
 
@@ -100,6 +101,9 @@ class data(data_paths):
         # '1' keeps only the largest area, None (default) does not change the mask
         self.extract        = params.getint('extract', None)
         self.lower_thresh   = params.getfloat('lower_thresh', None)
+
+        # frame interval in seconds
+        self.frame_int      = params.getfloat('frame_int', 1.0)
 
         self.first          = params.getint('first', 1)
         self.last           = params.getint('last')

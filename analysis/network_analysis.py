@@ -275,7 +275,8 @@ def project_on_skeleton(dye, skeleton):
 
 
 
-def inter_mean(dye, skeleton, mask, local_radii, relative_dist, interval_size = 10):
+def inter_mean(dye, skeleton, mask, local_radii,
+                relative_dist, interval_size = 10, div = 0.6):
     ### orth. projection on skeleton by finding the nearest point in skeleton
     ### + average over nearest pixel in skeleton within interval <= 10 pixel
     ### allow enough pixel to be considered such that "inner" "outer" can be returned
@@ -297,7 +298,7 @@ def inter_mean(dye, skeleton, mask, local_radii, relative_dist, interval_size = 
 
     for i in  range(0, len(dye_f)):
         if dye_f[i]!=0:
-            if relative_dist_f[i]<0.6:
+            if relative_dist_f[i] < div:
                 intensity_inner[inds0[i]][inds1[i]] += dye_f[i]
                 no_inner[inds0[i]][inds1[i]]+=1
             else:

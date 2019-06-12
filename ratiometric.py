@@ -39,10 +39,17 @@ def process_ratiometric(set, use_ref_for_mask = True):
 
     ### projection methods ###
     if set.method == 'disk_mean':
-        concentration, concentration_inner, concentration_outer = circle_mean(ratio, skeleton, mask, local_radii, rel_dist)
+        concentration, \
+        concentration_inner, \
+        concentration_outer = circle_mean(ratio, skeleton, mask,
+                                          local_radii, rel_dist)
 
     if set.method == 'inter_mean':
-        concentration, concentration_inner, concentration_outer = inter_mean(ratio, skeleton, mask, local_radii, rel_dist)
+        concentration, \
+        concentration_inner, \
+        concentration_outer = inter_mean(ratio, skeleton, mask, local_radii,
+                                         rel_dist, interval_size=30, div=0.8)
+
 
     np.savez_compressed(set.file_dat,           green_clean         = green_clean,
                                                 texas_clean         = texas_clean,
