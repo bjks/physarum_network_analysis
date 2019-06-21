@@ -28,22 +28,49 @@ def fft_kymo(signal, frame_int):
     plt.show()
 
 
-def bandpass(signal, frame_int,
-            lower_cutoff=0.005, upper_cutoff=0.08): #periods between 20 and 200s
+def bandpass(kymo, frame_int,
+            min_freq=0.005, max_freq=0.05,          #periods between 200 and 20s
+            min_period=None, max_period=None):
 
-    kymo_f = np.fft.rfft(signal)
-    freq    = np.fft.rfftfreq(signal.shape[-1], d=frame_int)
+    if min_period!=None and max_period!=None:
+        min_freq = 1./max_period
+        max_freq = 1./min_period
 
-    kymo_f[:, (freq>upper_cutoff)] = 0
-    kymo_f[:, (freq<lower_cutoff)] = 0
+    kymo_f = np.fft.rfft(kymo)
+    freq    = np.fft.rfftfreq(kymo.shape[-1], d=frame_int)
+
+    kymo_f[:, (freq > max_freq)] = 0
+    kymo_f[:, (freq < min_freq)] = 0
 
     return np.fft.irfft(kymo_f)
 
+def dominant_freq(kymo, frame_int, min_freq=0.05, max_period=None):
 
-def power_spec(kymo1, frame_int, file_name, title, max_freq=0.05):
+    if max_period!=None:
+        min_freq = 1./max_period
+
+    f, Pxx_den_full = signal.periodogram(kymo, fs=1/frame_int)
+    Pxx_den = np.mean(Pxx_den_full, axis=0)
+
+    Pxx_den = Pxx_den[f>min_freq]
+    f = f[f>min_freq]
+
+    dominant_freq = f[np.argmax(Pxx_den)]
+    return dominant_freq
+
+
+
+
+def power_spec(kymo1, frame_int, file_name, title,
+                min_freq=0.005, max_freq=0.05,          #periods between 200 and 20s
+                min_period=None, max_period=None):
+
+    if min_period!=None and max_period!=None:
+        min_freq = 1./max_period
+        max_freq = 1./min_period
 
     f1, Pxx_den1 = signal.periodogram(kymo1, fs=1/frame_int)
-    range = f1 < max_freq
+    range = (f1 < max_freq) * (f1 > min_freq)
 
     Pxx_den1    = Pxx_den1[:,range]
     f1          = f1[range]
@@ -58,9 +85,9 @@ def power_spec(kymo1, frame_int, file_name, title, max_freq=0.05):
 
 
     ax[1].plot(f1, np.mean(Pxx_den1, axis=0))
-    peaks, _ = find_peaks(np.mean(Pxx_den1, axis=0), distance=10)
-
-    ax[1].set_xticks(f1[peaks])
+    # peaks, _ = find_peaks(np.mean(Pxx_den1, axis=0), distance=10)
+    #
+    # ax[1].set_xticks(f1[peaks])
     # ax[1].set_yticks([])
     ax[1].xaxis.set_major_formatter(FormatStrFormatter('%.4f'))
     ax[1].set_xlabel('frequencies (1/s)')
@@ -96,7 +123,7 @@ def extract_phase(signal, file_name, title):
     ax[3].set_title('frequence')
     ax[3].imshow(instantaneous_frequency)
 
-    plt.savefig(file_name + title + 'hilbert.pdf')
+    plt.savefig(file_name + title + 'hilbert.pdf', dpi=400)
 
     if SHOW:
         plt.show()
@@ -105,29 +132,18 @@ def extract_phase(signal, file_name, title):
     return instantaneous_phase, amplitude_envelope, instantaneous_frequency
 
 
-###### Preparing Kymo Array ######
-def kymo_prep(kymo, align_keyword=None, alignment=None):
+###### Preparing Kymo ######
+def get_kymo(kymos_data, keyword, frame_int, align_keyword='reference_point'):
+    alignment = kymos_data['alignment']
+    kymo      = kymos_data[keyword]
 
     if align_keyword == None:
         return np.transpose(kymo)
 
-    aligned_kymo = align_kymo(kymo, align_keyword, alignment=alignment)
-    return np.transpose(crop_aligned_kymo(aligned_kymo))
-
-
-def collect_kymos(kymos_data, keywords, frame_int, align_keyword='reference_point'):
-    kymos = []
-    alignment       = kymos_data['alignment']
-
-    for k in keywords:
-        kymo = kymos_data[k]
-        kymo = kymo_prep(kymo, align_keyword, alignment)
-        kymo = bandpass(kymo, frame_int)
-        # fft_kymo(kymo, set.frame_int)
-        # show_im(kymo)
-        kymos.append(kymo)
-
-    return kymos
+    kymo =align_kymo(kymo, align_keyword, alignment=alignment)
+    kymo = np.transpose(crop_aligned_kymo(kymo))
+    kymo = bandpass(kymo, frame_int, min_period=40, max_period=140)
+    return kymo
 
 
 def gauss_detrend(kymo, r):
@@ -155,44 +171,61 @@ def bin_acc_phase(phase, x, n_bins=10, norm=True):
     return x_mean, bin_edges, x_std
 
 
+
+def sin_func(phase, A, phi):
+    return A * np.cos(phase - phi)
+
+
 def phase_average(phase, kymos, titles, colors, file_name):
     phase_shift = []
     for k, title, color in zip(kymos, titles, colors):
-        bin_mean, bin_edges, bin_std = bin_acc_phase(phase, k, n_bins=20)
+        bin_mean, bin_edges, bin_std = bin_acc_phase(phase, k, n_bins=15, norm=True)
         bin = bin_edges[:-1] + np.diff(bin_edges)/2
 
         phase_sample = np.linspace(bin[0], bin[-1], 100)
-        popt, _ = curve_fit(sin_func, bin, bin_mean)
+        popt, pcov   = curve_fit(sin_func, bin, bin_mean, p0=(-1,0))
 
-        plt.plot(phase_sample, sin_func(phase_sample, *popt), '--', color=color)
 
         plt.plot(bin, bin_mean , label=title + ', shift: ' +
-                    str( np.around(popt[-1], decimals=3) ),
-                    color=color)
-        # plt.fill_between(bin, r_mean - r_std, r_mean + r_std, alpha=0.2, color='orange')
+                    str( np.around(popt[-1], decimals=3) ), color=color)
+
+        # plt.fill_between(bin, bin_mean - bin_std, bin_mean + bin_std, alpha=0.2, color=color)
+
+        # min = bin[np.argmin(bin_mean)]
+        # plt.axvline(x=min, linewidth=1, color=color)
+
+        plt.plot(phase_sample, sin_func(phase_sample, *popt), '--', color=color)
+        y1 = sin_func(phase_sample, popt[0], popt[1] + pcov[1,1]**0.5)
+        y2 = sin_func(phase_sample, popt[0], popt[1] - pcov[1,1]**0.5)
+        plt.fill_between(phase_sample, y1, y2, color=color, alpha=0.15)
 
         plt.axvline(x=popt[-1], linewidth=1, color=color)
         phase_shift.append(popt[-1])
 
-    plt.ylabel('average (a.u.)')
+    plt.ylabel('average')
     plt.xlabel('phase')
     plt.legend()
 
     if SHOW:
         plt.show()
-    plt.savefig(file_name + '_phase.pdf')
+    plt.savefig(file_name + '_phase.pdf', dpi=400)
     plt.close()
 
 
     return phase_shift
 
+def mk_mising_dir(path_name):
+    if not os.path.exists(path_name):
+        os.mkdir(path_name)
+    return path_name
 
 
 ############# CORRELATION #############
-def correlate_phase(kymo1, kymo2, file_name, title, upsample=1, frame_int=1.0):
+def correlate_phase(kymo1, kymo2, file_name, title, upsample=1, downsample=1, frame_int=1.0):
 
-    kymo1 = ndi.zoom(kymo1, upsample, order=5)
-    kymo2 = ndi.zoom(kymo2, upsample, order=5)
+    kymo1 = ndi.zoom(kymo1, (downsample,upsample), order=5)
+    kymo2 = ndi.zoom(kymo2, (downsample,upsample), order=5)
+    # show_im(kymo1)
 
     image_product = np.fft.fft2(kymo1) * np.fft.fft2(kymo2).conj()
     cc_image = np.fft.ifft2(image_product)
@@ -214,7 +247,7 @@ def correlate_phase(kymo1, kymo2, file_name, title, upsample=1, frame_int=1.0):
     #### plotting ####
     plt.imshow(correlation)
 
-    plt.ylabel('space lag (frame)')
+    plt.ylabel('space lag (pixel)')
     plt.xlabel('time lag (s)')
 
 
@@ -231,7 +264,7 @@ def correlate_phase(kymo1, kymo2, file_name, title, upsample=1, frame_int=1.0):
     x_positions = np.arange(0, nx, step_x)
 
     plt.xticks(t_positions,  (t_positions-nt/2)*frame_int/upsample)
-    plt.yticks(x_positions,  (x_positions-nx/2)/upsample )
+    plt.yticks(x_positions,  x_positions-nx/2 )
 
     plt.colorbar()
     plt.grid(linestyle='-', linewidth=0.4)
@@ -240,15 +273,14 @@ def correlate_phase(kymo1, kymo2, file_name, title, upsample=1, frame_int=1.0):
     if SHOW:
         plt.show()
 
-    plt.savefig(file_name + title + 'correlate.pdf')
+    plt.savefig(file_name + title + 'correlate.pdf', dpi=400)
     plt.close()
 
+    print(min * frame_int/ upsample, max * frame_int/ upsample)
     return min * frame_int/ upsample, max * frame_int/ upsample
 
 
 
-def sin_func(phase, A, phi):
-    return A * np.cos(phase - phi)
 
 
 
@@ -256,6 +288,7 @@ def sin_func(phase, A, phi):
 ################################ MAIN ####################################
 ##########################################################################
 SHOW = False
+SAVE = False
 
 def main():
     set_keyword     = os.sys.argv[1]
@@ -273,62 +306,90 @@ def main():
             kymos_data  = np.load(set.file_dat_set + '_branch_' + str(label) + '.npz')
 
 
-            keywords = ['kymograph_local_radii',
-                        'kymograph_concentration',
-                        'kymograph_inner',
-                        'kymograph_outer']
+            path_name = mk_mising_dir(set.file_plot_set + '_branch_' + str(label) + '/')
+            file_name = path_name + '/branch_' + str(label) + '_'
+
+
+            radii = get_kymo(kymos_data, 'kymograph_local_radii', set.frame_int,
+                            align_keyword)
+
+            freq = dominant_freq(radii, set.frame_int, max_period=140)
+            print(freq)
+
+            conce = get_kymo(kymos_data, 'kymograph_concentration',
+                            set.frame_int,  align_keyword)
+            inner = get_kymo(kymos_data, 'kymograph_inner',  set.frame_int,
+                            align_keyword)
+            outer = get_kymo(kymos_data, 'kymograph_outer',  set.frame_int,
+                            align_keyword)
+
+            power_spec(radii, set.frame_int, file_name, 'radius')
+            power_spec(conce, set.frame_int, file_name, 'concentration')
+
+
+            radius_base = bandpass(radii, set.frame_int,
+                                    min_freq=freq, max_freq=freq)
+
+            conce_base = bandpass(conce, set.frame_int,
+                                    min_freq=freq, max_freq=freq)
+
+
+            radii = bandpass(radii, set.frame_int, min_freq=freq, max_freq=freq)
+            conce = bandpass(conce, set.frame_int, min_freq=freq, max_freq=freq)
+            inner = bandpass(inner, set.frame_int, min_freq=freq, max_freq=freq)
+            outer = bandpass(outer, set.frame_int, min_freq=freq, max_freq=freq)
+
+
+            phase_radius, _, _  = extract_phase(radius_base, file_name, 'contraction')
+
+            phase_conce, _,_  = extract_phase(conce_base, file_name, 'concentration')
+
 
             titles = ['radius', 'concentration', 'inner', 'outer']
             colors = ['orange', 'blue', 'darkblue', 'lightskyblue']
+            kymos  = [radii, conce, inner, outer]
 
-            kymos = collect_kymos(kymos_data, keywords, set.frame_int, align_keyword)
+            phase_shift = phase_average(phase_radius, kymos, titles, colors,
+                                        file_name)
 
-            path_name = set.file_plot_set + '_branch_' + str(label) + '/'
-            if not os.path.exists(path_name):
-                os.mkdir(path_name)
-            file_name = path_name + '/branch_' + str(label) + '_'
-
-            ########################## analysis #############################
-            ###### power spec   ######
-            power_spec(kymos[0], set.frame_int, file_name, 'radius')
-            power_spec(kymos[1], set.frame_int, file_name, 'concentration')
-
-            ###### phases       ######
-            phase, amp, freq        = extract_phase(kymos[0], file_name, 'radius')
-            phase_c, amp_c, freq_c  = extract_phase(kymos[1], file_name, 'concentration')
-
-            phase_shift = phase_average(phase, kymos, titles, colors, file_name)
 
             ###### correlations ######
-            min_k, max_k = correlate_phase(kymos[0], kymos[1], file_name, 'kymos',
-                                            upsample=5, frame_int=set.frame_int)
-            min_p, max_p = correlate_phase(phase, phase_c, file_name,
-                                            'phases', upsample=2)
+            min_k, max_k = correlate_phase(radii, conce,
+                                            file_name, 'kymos',
+                                            upsample=10, downsample=1,
+                                            frame_int=set.frame_int)
+
+
+            min_p, max_p = correlate_phase(phase_radius, phase_conce,
+                                            file_name, 'phases',
+                                            upsample=10, downsample=1,
+                                            frame_int=set.frame_int)
 
 
             ######################### Save in txt ###########################
-            if not os.path.exists('time_shifts_data_sets'):
-                os.mkdir('time_shifts_data_sets')
+            if SAVE:
+                if not os.path.exists('time_shifts_data_sets'):
+                    os.mkdir('time_shifts_data_sets')
 
-            data_sets_summary = 'time_shifts_data_sets/time_shift_' + color +'.txt'
-            if not os.path.isfile(data_sets_summary):
-                with open(data_sets_summary, "w") as out_var:
-                    out_var.write('# data_set \t label \t phase_radius' +
-                                    '\t phase_conc \t phase_inner' +
-                                    '\t phase_outer \t min_kymo \t max_kymo' +
-                                     '\t min_phase \t max_phase \n')
+                data_sets_summary = 'time_shifts_data_sets/time_shift_' + color +'.txt'
+                if not os.path.isfile(data_sets_summary):
+                    with open(data_sets_summary, "w") as out_var:
+                        out_var.write('# data_set \t label \t phase_radius' +
+                                        '\t phase_conc \t phase_inner' +
+                                        '\t phase_outer \t min_kymo \t max_kymo' +
+                                         '\t min_phase \t max_phase \n')
 
-            with open(data_sets_summary, "a") as out_var:
-                out_var.write(set_keyword +
-                                '\t' + str(label) +
-                                '\t' + str(phase_shift[0]) +
-                                '\t' + str(phase_shift[1]) +
-                                '\t' + str(phase_shift[2]) +
-                                '\t' + str(phase_shift[3]) +
-                                '\t' + str(min_k) +
-                                '\t' + str(max_k) +
-                                '\t' + str(min_p) +
-                                '\t' + str(max_p) + '\n')
+                with open(data_sets_summary, "a") as out_var:
+                    out_var.write(set_keyword +
+                                    '\t' + str(label) +
+                                    '\t' + str(phase_shift[0]) +
+                                    '\t' + str(phase_shift[1]) +
+                                    '\t' + str(phase_shift[2]) +
+                                    '\t' + str(phase_shift[3]) +
+                                    '\t' + str(min_k) +
+                                    '\t' + str(max_k) +
+                                    '\t' + str(min_p) +
+                                    '\t' + str(max_p) + '\n')
 
 
 if __name__ == '__main__':

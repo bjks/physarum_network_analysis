@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import skimage.morphology as morph              # skeleton
-from skimage.measure import regionprops         # extract_nerwork
+from skimage.measure import regionprops         # extract_network
 
 
 from scipy import ndimage as ndi                    # gaussian_filter
@@ -55,7 +55,7 @@ def create_mask(dye, sig, thresh, halo_sig):
         mask = np.where(mask > thresh*(np.mean(dye)), 1., 0.)
     return mask
 
-def extract_nerwork(mask, n):
+def extract_network(mask, n):
     if n == None:
         return mask
 
@@ -217,7 +217,7 @@ def absolute_distance(skeleton, mask):
 
 
 
-def circle_mean(dye, skeleton, mask, local_radii, relative_dist):
+def circle_mean(dye, skeleton, mask, local_radii, relative_dist, div=0.5):
     ###### 'sliding disk' #####
     cx = np.arange(0, dye.shape[1])
     cy = np.arange(0, dye.shape[0])
@@ -226,8 +226,8 @@ def circle_mean(dye, skeleton, mask, local_radii, relative_dist):
     # relative_dist, radii = relative_distance(skeleton, mask, local_radii)
 
     ### seperate outer and inner of network based on relative_dist
-    dye_inner = np.where(relative_dist <= 0.6, dye, 0)
-    dye_outer = np.where(relative_dist > 0.6, dye, 0)
+    dye_inner = np.where(relative_dist <= div, dye, 0)
+    dye_outer = np.where(relative_dist > div, dye, 0)
 
     concentration       = np.zeros_like(local_radii)
     concentration_inner = np.zeros_like(local_radii)
@@ -276,7 +276,7 @@ def project_on_skeleton(dye, skeleton):
 
 
 def inter_mean(dye, skeleton, mask, local_radii,
-                relative_dist, interval_size = 10, div = 0.6):
+                relative_dist, interval_size = 10, div = 0.5):
     ### orth. projection on skeleton by finding the nearest point in skeleton
     ### + average over nearest pixel in skeleton within interval <= 10 pixel
     ### allow enough pixel to be considered such that "inner" "outer" can be returned
@@ -321,9 +321,14 @@ def inter_mean(dye, skeleton, mask, local_radii,
                                          out=np.zeros_like(dye),
                                          where=intensity_outer!=0)
 
-    concentration         = disk_filter(concentration, concentration, interval_size) * skeleton
-    concentration_inner   = disk_filter(concentration_inner, concentration, interval_size) * skeleton
-    concentration_inner   = disk_filter(concentration_outer, concentration, interval_size) * skeleton
+
+    concentration         = disk_filter(concentration,
+                                        skeleton, interval_size) * skeleton
+    concentration_inner   = disk_filter(concentration_inner,
+                                        skeleton, interval_size) * skeleton
+    concentration_outer   = disk_filter(concentration_outer,
+                                        skeleton, interval_size) * skeleton
+
 
     return  concentration, \
             concentration_inner, \

@@ -22,12 +22,12 @@ def process_ratiometric(set, use_ref_for_mask = True):
     else:
         mask = create_mask(green, set.sigma, set.threshold, set.halo_sig)
 
-    mask = extract_nerwork(mask, set.extract)
+    mask = extract_network(mask, set.extract)
 
     green_clean     = np.multiply(green, mask)
     texas_clean     = np.multiply(texas, mask)
 
-    # _, green_clean     = remove_spots(green_clean, mask, set.spots_radius, set.thresh_spots)
+    _, green_clean     = remove_spots(green_clean, mask, set.spots_radius, set.thresh_spots)
 
     ratio                          = calc_ratio(green_clean, texas_clean)
 
@@ -42,13 +42,13 @@ def process_ratiometric(set, use_ref_for_mask = True):
         concentration, \
         concentration_inner, \
         concentration_outer = circle_mean(ratio, skeleton, mask,
-                                          local_radii, rel_dist)
+                                          local_radii, rel_dist, div=0.5)
 
     if set.method == 'inter_mean':
         concentration, \
         concentration_inner, \
         concentration_outer = inter_mean(ratio, skeleton, mask, local_radii,
-                                         rel_dist, interval_size=30, div=0.8)
+                                         rel_dist, interval_size=50, div=0.5)
 
 
     np.savez_compressed(set.file_dat,           green_clean         = green_clean,
