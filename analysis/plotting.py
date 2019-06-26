@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from  analysis.tools import *
+from analysis.tools import *
 from analysis.network_analysis import *
 
 def plot_image(file_dat, keyword, file_plot, show=False):
@@ -100,7 +100,7 @@ def processing_visualization_color(file_dat, file_plot, color, show=False):
 
 
 def plot_branch(branch_map, label, path_name):
-    plt.imshow( thick_skeleton(branch_map))
+    plt.imshow(thick_skeleton(branch_map))
     plt.savefig(path_name + 'branch' + str(label) + '.pdf')
     plt.close()
 

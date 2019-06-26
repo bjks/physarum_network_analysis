@@ -43,11 +43,18 @@ for set, t in zip(data_sets, t_arr):
         texas_clean = np.load(set.file_dat + '.npz')['texas_clean']
         image = calc_ratio(green_clean, texas_clean)
 
+    elif keyword == 'raw_green':
+        image = np.load(set.file_dat + '.npz')['network_clean']
+
     elif keyword == 'concentration':
         image = tube_radius_at_point(mask, skeleton, concentration)
+
     elif keyword == 'norm_conc':
         norm_conc = calc_ratio(concentration, local_radii)
         image = tube_radius_at_point(mask, skeleton, norm_conc)
+
+    elif keyword == 'skeleton':
+        image = thick_skeleton(skeleton)
 
     image = np.where(image == 0, np.nan, image)
     map.append(image)

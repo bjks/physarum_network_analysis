@@ -101,10 +101,68 @@ def interpl_images(dye1, dye2, sigma, threshold, halo_sig):
 ########## skeleton mapping #########
 #####################################
 
-def extract_skeleton(mask):
-    # temp = ndi.gaussian_filter(dye, sigma=sig)
-    # temp = np.where(temp > thresh*(np.mean(temp)) , 1., 0.)
-    return morph.skeletonize(mask)
+def node_detection(bitmap):
+    skeleton = np.where(bitmap!=0, 1, 0)
+    sum =   (np.roll(skeleton,  1, axis=1) +
+             np.roll(skeleton, -1, axis=1) +
+             np.roll(skeleton,  1, axis=0) +
+             np.roll(skeleton, -1, axis=0) +
+             np.roll(np.roll(skeleton, 1, axis=0), 1, axis=1) +
+             np.roll(np.roll(skeleton, 1, axis=0), -1, axis=1) +
+             np.roll(np.roll(skeleton, -1, axis=0), 1, axis=1) +
+             np.roll(np.roll(skeleton, -1, axis=0), -1, axis=1))
+
+    nodes       = np.where(sum > 2, 1, 0) * skeleton
+    endpoints   = np.where(sum ==1, 1, 0) * skeleton
+
+    return nodes, endpoints
+
+
+def remove_branch(branch, endpoints, branch_thresh):
+    if np.max(branch + endpoints) > 1 and np.sum(branch) < branch_thresh:
+        return True
+    else:
+        return False
+
+def extract_skeleton(mask, method='medial_axis', branch_thresh=50):
+
+    if method=='medial_axis':
+        # returns the line consiting of pixels that have 2 (or more)
+        # nearest pixels; often many small branches emerge
+        medial_axis = morph.medial_axis(mask)
+
+    elif method=='skeletonize':
+        # returns the skeleton calculated via morph. thinning, which does not
+        # guarantee to get the center line in a pixel(!) image
+        medial_axis = morph.skeletonize(mask)
+
+
+    if branch_thresh == 0:
+        return medial_axis
+
+    nodes, endpoints = node_detection(medial_axis)
+    seperated_skel = medial_axis - nodes
+
+    seper_l, no_l = morph.label(seperated_skel, connectivity=2, return_num=True)
+
+    # iterate over branches
+    for l in range(1, no_l+1):
+        branch = np.where(seper_l==l, 1, 0)
+        # remove branches that don't connect anything and are shorter than
+        # branch_thresh
+        if remove_branch(branch, endpoints, branch_thresh):
+            medial_axis = np.where(branch==1, 0, medial_axis)
+
+    # add nodes to conncect network again
+    medial_axis = np.logical_or(medial_axis, nodes)
+    # remove nodes that are not longer part of the network
+    medial_axis = morph.remove_small_objects(medial_axis, 5, connectivity=2)
+
+    # thinning necessary since nodes that lost a branch are wider that 1px
+    medial_axis = morph.skeletonize(medial_axis)
+
+    return medial_axis
+
 
 def extract_radii(mask, skeleton):
     distance = ndi.distance_transform_edt(mask)

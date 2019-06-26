@@ -22,20 +22,26 @@ def process_ratiometric(set, use_ref_for_mask = True):
     else:
         mask = create_mask(green, set.sigma, set.threshold, set.halo_sig)
 
+    # keep only the largest objects, number given by 'extract'
     mask = extract_network(mask, set.extract)
 
-    green_clean     = np.multiply(green, mask)
-    texas_clean     = np.multiply(texas, mask)
+    ### skeleton, radii ###
+    skeleton = extract_skeleton(mask, method='skeletonize', branch_thresh=150)
 
-    _, green_clean     = remove_spots(green_clean, mask, set.spots_radius, set.thresh_spots)
+    plt.imshow(thick_skeleton(skeleton))
+    plt.show()
+
+    local_radii = extract_radii(mask, skeleton)
+
+    rel_dist, radii_map = relative_distance(skeleton, mask, local_radii)
+
+
+    green_clean = np.multiply(green, mask)
+    texas_clean = np.multiply(texas, mask)
+
+    _, green_clean = remove_spots(green_clean, mask, set.spots_radius, set.thresh_spots)
 
     ratio                          = calc_ratio(green_clean, texas_clean)
-
-    ### skeleton, radii ###
-    skeleton                       = extract_skeleton(mask)
-    local_radii                    = extract_radii(mask, skeleton)
-
-    rel_dist, radii_map            = relative_distance(skeleton, mask, local_radii)
 
     ### projection methods ###
     if set.method == 'disk_mean':
@@ -74,7 +80,6 @@ def main(): ## python3 ratiometric.py <keyword> <first> <last(+1)>
     set_keyword = os.sys.argv[1]
     method  = 'inter_mean'
 
-##### green(i) texas(i+0.5), texas(i-0.5) green(i) ####
     for order in ['tg', 'gt']:
         data_sets = [data(set_keyword, i, method, color=order) for i in range( int(os.sys.argv[2]),int(os.sys.argv[3]) )]
 

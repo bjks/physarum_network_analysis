@@ -1,26 +1,10 @@
 import numpy as np
 import skimage.morphology as morph
 import copy
+from analysis.network_analysis import *
+
 from analysis.plotting import *
 import os
-
-
-def node_detection(bitmap):
-    skeleton = np.where(bitmap!=0, 1, 0)
-    sum =   (np.roll(skeleton,  1, axis=1) +
-             np.roll(skeleton, -1, axis=1) +
-             np.roll(skeleton,  1, axis=0) +
-             np.roll(skeleton, -1, axis=0) +
-             np.roll(np.roll(skeleton, 1, axis=0), 1, axis=1) +
-             np.roll(np.roll(skeleton, 1, axis=0), -1, axis=1) +
-             np.roll(np.roll(skeleton, -1, axis=0), 1, axis=1) +
-             np.roll(np.roll(skeleton, -1, axis=0), -1, axis=1))
-
-    nodes       = np.where(sum > 2, 1, 0) * skeleton
-    endpoints   = np.where(sum ==1, 1, 0) * skeleton
-
-    return nodes, endpoints
-
 
 def closest_point_in_skel(seed, skeleton):
     coords_skel = np.transpose(np.nonzero(skeleton))

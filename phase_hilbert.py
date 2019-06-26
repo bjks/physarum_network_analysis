@@ -133,7 +133,9 @@ def extract_phase(signal, file_name, title):
 
 
 ###### Preparing Kymo ######
-def get_kymo(kymos_data, keyword, frame_int, align_keyword='reference_point'):
+def get_kymo(kymos_data, keyword, frame_int, align_keyword='reference_point',
+            min_period=40, max_period=140):
+
     alignment = kymos_data['alignment']
     kymo      = kymos_data[keyword]
 
@@ -142,7 +144,10 @@ def get_kymo(kymos_data, keyword, frame_int, align_keyword='reference_point'):
 
     kymo =align_kymo(kymo, align_keyword, alignment=alignment)
     kymo = np.transpose(crop_aligned_kymo(kymo))
-    kymo = bandpass(kymo, frame_int, min_period=40, max_period=140)
+
+    kymo = bandpass(kymo, frame_int, min_period=min_period,
+                    max_period=max_period)
+
     return kymo
 
 
@@ -189,7 +194,7 @@ def phase_average(phase, kymos, titles, colors, file_name):
         plt.plot(bin, bin_mean , label=title + ', shift: ' +
                     str( np.around(popt[-1], decimals=3) ), color=color)
 
-        # plt.fill_between(bin, bin_mean - bin_std, bin_mean + bin_std, alpha=0.2, color=color)
+        plt.fill_between(bin, bin_mean - bin_std, bin_mean + bin_std, alpha=0.2, color=color)
 
         # min = bin[np.argmin(bin_mean)]
         # plt.axvline(x=min, linewidth=1, color=color)
@@ -288,7 +293,7 @@ def correlate_phase(kymo1, kymo2, file_name, title, upsample=1, downsample=1, fr
 ################################ MAIN ####################################
 ##########################################################################
 SHOW = False
-SAVE = False
+SAVE = True
 
 def main():
     set_keyword     = os.sys.argv[1]
@@ -323,9 +328,6 @@ def main():
             outer = get_kymo(kymos_data, 'kymograph_outer',  set.frame_int,
                             align_keyword)
 
-            power_spec(radii, set.frame_int, file_name, 'radius')
-            power_spec(conce, set.frame_int, file_name, 'concentration')
-
 
             radius_base = bandpass(radii, set.frame_int,
                                     min_freq=freq, max_freq=freq)
@@ -333,14 +335,17 @@ def main():
             conce_base = bandpass(conce, set.frame_int,
                                     min_freq=freq, max_freq=freq)
 
+            # range_freq = 0.002
+            # radii = bandpass(radii, set.frame_int, min_freq=freq-range_freq, max_freq=freq+range_freq)
+            # conce = bandpass(conce, set.frame_int, min_freq=freq-range_freq, max_freq=freq+range_freq)
+            # inner = bandpass(inner, set.frame_int, min_freq=freq-range_freq, max_freq=freq+range_freq)
+            # outer = bandpass(outer, set.frame_int, min_freq=freq-range_freq, max_freq=freq+range_freq)
 
-            radii = bandpass(radii, set.frame_int, min_freq=freq, max_freq=freq)
-            conce = bandpass(conce, set.frame_int, min_freq=freq, max_freq=freq)
-            inner = bandpass(inner, set.frame_int, min_freq=freq, max_freq=freq)
-            outer = bandpass(outer, set.frame_int, min_freq=freq, max_freq=freq)
 
+            power_spec(radii, set.frame_int, file_name, 'radius')
+            power_spec(conce, set.frame_int, file_name, 'concentration')
 
-            phase_radius, _, _  = extract_phase(radius_base, file_name, 'contraction')
+            phase_radius, _, _  = extract_phase(radius_base, file_name, 'radius')
 
             phase_conce, _,_  = extract_phase(conce_base, file_name, 'concentration')
 

@@ -27,6 +27,7 @@ def main(): ## python3 skeleton.py <keyword> <seed index (0,...)>
 
     for color in colors:
         data_sets = [data(set_keyword, i, method, color=color) for i in range(data(set_keyword).first, data(set_keyword).last)]
+
         process_skeleton(data_sets, seed_position, label)
 
 
