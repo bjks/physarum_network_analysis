@@ -23,7 +23,7 @@ def process_network(set):
 
     _, network_clean     = remove_spots(network_clean, mask, set.spots_radius, set.thresh_spots)
 
-    skeleton                       = medial_axis(mask, method='skeletonize', branch_thresh=30)
+    skeleton                       = medial_axis(mask, method='medial_axis', branch_thresh=150)
     local_radii                    = extract_radii(mask, skeleton)
 
     rel_dist, radii_map            = relative_distance(skeleton, mask, local_radii)

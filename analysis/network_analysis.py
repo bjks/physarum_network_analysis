@@ -156,10 +156,17 @@ def extract_skeleton(mask, method='medial_axis', branch_thresh=50):
     # add nodes to conncect network again
     medial_axis = np.logical_or(medial_axis, nodes)
     # remove nodes that are not longer part of the network
-    medial_axis = morph.remove_small_objects(medial_axis, 5, connectivity=2)
+    medial_axis = morph.remove_small_objects(medial_axis, 6, connectivity=2)
 
     # thinning necessary since nodes that lost a branch are wider that 1px
     medial_axis = morph.skeletonize(medial_axis)
+
+    selem = morph.disk(5)
+
+    new = 3 * morph.dilation(medial_axis, selem) + mask
+    # new = medial_axis *3 + mask
+    plt.imshow(new,cmap='Blues') # [750:950, 500:700]
+    plt.show()
 
     return medial_axis
 
@@ -249,7 +256,8 @@ def tube_radius_at_point(mask, skel, local_radii):
     #   in network based on value of the nearest skeleton point
     radii = mask.copy().astype(float)
     inds = ndi.distance_transform_edt(np.invert(skel.astype(bool)),
-                                      return_distances=False, return_indices=True)
+                                      return_distances=False,
+                                      return_indices=True)
 
     radii = radii.flatten()
     inds0 = inds[0].flatten()
@@ -263,14 +271,17 @@ def tube_radius_at_point(mask, skel, local_radii):
 
 def relative_distance(skeleton, mask, local_radii):
     distance = ndi.distance_transform_edt(np.invert(skeleton.astype(bool)),
-                                          return_distances=True, return_indices=False)
+                                          return_distances=True,
+                                          return_indices=False)
     distance *= mask
     radii = tube_radius_at_point(mask, skeleton, local_radii)
-    return np.true_divide(distance, radii, out=np.zeros_like(radii), where=radii!=0), radii
+    return np.true_divide(distance, radii, out=np.zeros_like(radii),
+                            where=radii!=0), radii
 
 def absolute_distance(skeleton, mask):
     distance = ndi.distance_transform_edt(np.invert(skeleton.astype(bool)),
-                                          return_distances=True, return_indices=False)
+                                          return_distances=True,
+                                          return_indices=False)
     return distance
 
 
@@ -310,7 +321,7 @@ def circle_mean(dye, skeleton, mask, local_radii, relative_dist, div=0.5):
 
 def project_on_skeleton(dye, skeleton):
     ### orth. projection on skeleton by finding the nearest point in skeleton
-    ### only a few points are average, thus the results are noisy
+    ### only a few points are averaged, thus the results are noisy
     intensity   = np.zeros_like(dye)
     no          = np.zeros_like(dye)
 

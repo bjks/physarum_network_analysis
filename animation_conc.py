@@ -28,7 +28,6 @@ data_sets = [data(set_keyword, i, method, color=color) for i in t_arr]
 map = []
 print('>> Reading...')
 # first, last = data(set_keyword).first , data(set_keyword).last
-print(t_arr)
 
 for set, t in zip(data_sets, t_arr):
     print(' >>', t )
@@ -41,10 +40,24 @@ for set, t in zip(data_sets, t_arr):
     if keyword == 'raw':
         green_clean = np.load(set.file_dat + '.npz')['green_clean']
         texas_clean = np.load(set.file_dat + '.npz')['texas_clean']
-        image = calc_ratio(green_clean, texas_clean)
+        rd = np.load(set.file_dat + '.npz')['rel_dist']
 
-    elif keyword == 'raw_green':
+        image = np.where(rd<1, calc_ratio(green_clean, texas_clean), 0)
+
+    elif keyword == 'raw_net':
         image = np.load(set.file_dat + '.npz')['network_clean']
+
+    elif keyword == 'raw_norm':
+        rd = np.load(set.file_dat + '.npz')['rel_dist']
+        r  = tube_radius_at_point(mask, skeleton, local_radii)
+        height = np.where(rd<1, r * np.sqrt(1 - rd**2), 0)
+        if color == 'green':
+            network = np.load(set.file_dat + '.npz')['network_clean']
+        else:
+            network = np.load(set.file_dat + '.npz')['green_clean']
+
+        image = np.where(height>0, calc_ratio(network,height), 0)
+
 
     elif keyword == 'concentration':
         image = tube_radius_at_point(mask, skeleton, concentration)

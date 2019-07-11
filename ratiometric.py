@@ -25,11 +25,9 @@ def process_ratiometric(set, use_ref_for_mask = True):
     # keep only the largest objects, number given by 'extract'
     mask = extract_network(mask, set.extract)
 
-    ### skeleton, radii ###
-    skeleton = extract_skeleton(mask, method='skeletonize', branch_thresh=150)
+    ### skeleton, radii ### add branch_thresh to config files?!
+    skeleton = extract_skeleton(mask, method='medial_axis', branch_thresh=150)
 
-    plt.imshow(thick_skeleton(skeleton))
-    plt.show()
 
     local_radii = extract_radii(mask, skeleton)
 
@@ -40,6 +38,8 @@ def process_ratiometric(set, use_ref_for_mask = True):
     texas_clean = np.multiply(texas, mask)
 
     _, green_clean = remove_spots(green_clean, mask, set.spots_radius, set.thresh_spots)
+    _, texas_clean = remove_spots(texas_clean, mask, set.spots_radius, set.thresh_spots)
+
 
     ratio                          = calc_ratio(green_clean, texas_clean)
 

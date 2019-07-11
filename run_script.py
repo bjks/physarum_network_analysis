@@ -132,6 +132,15 @@ def run_correlation():
         os.system(com)
 
 
+def run_phase():
+    com  =  'qsub -v NAME='     + os.sys.argv[2] + \
+                     ',COL='    + os.sys.argv[3] + \
+                      to_qsub + 'qsub_phase.sh'
+
+    print(com)
+    if sys.platform.startswith('linux'):
+        os.system(com)
+
 def run_tube_profile():
     com  = 'qsub -v NAME=' +  os.sys.argv[2] + \
                     ',NO=' + os.sys.argv[3] + to_qsub + 'qsub_tube_profile.sh'
@@ -165,6 +174,9 @@ elif script.startswith('ske'):
 
 elif script.startswith('cor'):
     run_correlation()
+
+elif script.startswith('pha'):
+    run_phase()
 
 elif script.startswith('net'):
     run_network()
