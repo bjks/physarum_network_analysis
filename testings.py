@@ -62,36 +62,27 @@ def main():
     # plt.imshow(mask)
     # plt.show()
     #
-    n= 1000
+    n= 100
     a = [np.arange(0,n) for i in range(100)]
     t = np.transpose(0.001*np.array(a))
-    signal1 = chirp(t, 20.0, 10, 100.0)
     signal1 = 1.0 + 0.5 * np.sin(2.0*np.pi*3.0*t)
 
-    signal2 = chirp(t, 20.0, 10, 100.0)
-    signal2 *= (1.0 + 0.5 * np.cos(2.0*np.pi*3.0*t) )
-
-    signal1 = kymo_prep(signal1)
-    signal2 = kymo_prep(signal2)
-
-    phase1, amp1 = extract_phase(signal1, return_amp=True)
-    phase2, amp2 = extract_phase(signal2, return_amp=True)
 
     fig = plt.figure()
 
 
     ax0 = fig.add_subplot(311)
-    ax0.plot(np.mean(signal1, axis=0))
+    ax0.plot(np.mean(signal1, axis=1))
     ax0.set_xlabel("time in seconds")
 
 
     ax1 = fig.add_subplot(312)
-    ax1.plot(np.mean(amp1, axis=0))
+    ax1.plot(np.mean(ndi.zoom(signal1, 3, order=5), axis=1))
     ax1.set_xlabel("time in seconds")
 
     ax2 = fig.add_subplot(313)
 
-    ax2.plot(np.mean(phase1, axis=0))
+    ax2.plot(np.mean(signal1, axis=1))
 
     plt.show()
 

@@ -166,20 +166,6 @@ def get_kymo(kymos_data, keyword, frame_int, align_keyword='reference_point',
     return kymo
 
 
-def shift_radii(radii):
-    return ndi.zoom(radii, (1,2), order=5)[1:]
-
-
-def normalize_green(green, texas):
-    green = ndi.zoom(green, (1,2), order=5)[:-1]
-    texas = ndi.zoom(texas, (1,2), order=5)[1:]
-    print(np.shape(texas))
-
-    return green/texas
-
-
-
-
 ####################### Endo-ectoplasm problem ########################
 def radius_dependence(radii, conce, frame_int):
     # g means 'global'
@@ -389,8 +375,8 @@ SHOW = False
 SAVE = False
 
 def main():
-    set_keyword     = os.sys.argv[1].strip()
-    color           = 'sep'
+    set_keyword     = os.sys.argv[1]
+    colors          = [c.rstrip() for c in os.sys.argv[2:]]
 
     align_keyword   = 'reference_point'
     method          = 'inter_mean'
@@ -404,151 +390,140 @@ def main():
     range_freq      = 0.001, 0.003
 
 
+
     labels = range(len(data(set_keyword).seed_positions))
-    for label in labels:
-        set         = data(set_keyword, method=method, color=color)
-        kymos_data  = np.load(set.file_dat_set + '_branch_' + str(label) + '.npz')
-
-        path_name = mk_mising_dir(set.file_plot_set + '_branch_' + str(label) + '/')
-        file_name = path_name + '/branch_' + str(label) + '_'
-
-        ##################################################################
-        ########################## Collect data ##########################
-        ##################################################################
-        radii = get_kymo(kymos_data, 'kymo_local_radii', set.frame_int,
-                        align_keyword, times=times, positions=positions)
-
-        kymo_c_green = get_kymo(kymos_data, 'kymo_c_green', set.frame_int,
-                        align_keyword, times=times, positions=positions)
-        kymo_inner_green = get_kymo(kymos_data, 'kymo_inner_green',  set.frame_int,
-                        align_keyword, times=times, positions=positions)
-        kymo_outer_green = get_kymo(kymos_data, 'kymo_outer_green',  set.frame_int,
-                        align_keyword, times=times, positions=positions)
-
-        kymo_c_texas = get_kymo(kymos_data, 'kymo_c_texas', set.frame_int,
-                        align_keyword, times=times, positions=positions)
-        kymo_inner_texas = get_kymo(kymos_data, 'kymo_inner_texas',  set.frame_int,
-                        align_keyword, times=times, positions=positions)
-        kymo_outer_texas = get_kymo(kymos_data, 'kymo_outer_texas',  set.frame_int,
-                        align_keyword, times=times, positions=positions)
+    for color in colors:
+        for label in labels:
+            set         = data(set_keyword, method=method, color=color)
+            kymos_data  = np.load(set.file_dat_set + '_branch_' + str(label) + '.npz')
 
 
-        titles = ['radius', 'green', 'texas']
-        kymos  = [radii, kymo_c_green, kymo_c_texas]
+            path_name = mk_mising_dir(set.file_plot_set + '_branch_' + str(label) + '/')
+            file_name = path_name + '/branch_' + str(label) + '_'
 
-        plot_kymographs(kymos, titles, file_name, set.frame_int)
+            ##################################################################
+            ########################## Collect data ##########################
+            ##################################################################
+            radii = get_kymo(kymos_data, 'kymograph_local_radii', set.frame_int,
+                            align_keyword, times=times, positions=positions)
+            conce = get_kymo(kymos_data, 'kymograph_concentration', set.frame_int,
+                            align_keyword, times=times, positions=positions)
+            inner = get_kymo(kymos_data, 'kymograph_inner',  set.frame_int,
+                            align_keyword, times=times, positions=positions)
+            outer = get_kymo(kymos_data, 'kymograph_outer',  set.frame_int,
+                            align_keyword, times=times, positions=positions)
 
-        radii = shift_radii(radii)
-        conce = normalize_green(kymo_c_green, kymo_c_texas)
-        inner = normalize_green(kymo_inner_green, kymo_inner_texas)
-        outer = normalize_green(kymo_outer_green, kymo_outer_texas)
-        set.frame_int/=2.
 
-        print(set.frame_int)
-
-        freq = dominant_freq(radii, set.frame_int, max_period=max_period)
-        print('Dominant frequency: ', freq)
+            freq = dominant_freq(radii, set.frame_int, max_period=max_period)
+            print('Dominant frequency: ', freq)
 
 
-        ####################################################
-        ########### substract  Ca_global(R) ################
-        ####################################################
-        if substract_ecto:
-            show_im(conce)
-            conce = substract_ecto_contribution(radii, conce, set.frame_int)
-            inner = substract_ecto_contribution(radii, inner, set.frame_int)
-            outer = substract_ecto_contribution(radii, outer, set.frame_int)
-            show_im(conce)
-        ##################################################################
-        ################# calc phase of oscillation ######################
-        ##################################################################
-        radius_base = bandpass(radii, set.frame_int,
-                                min_freq=freq-range_freq[0],
-                                max_freq=freq+range_freq[1])
+            ####################################################
+            ########### substract  Ca_global(R) ################
+            ####################################################
+            if substract_ecto:
+                print('Correlation BEFORE normalization: ',
+                        np.correlate(radii.flatten()-np.mean(radii.flatten()),
+                                     conce.flatten()-np.mean(conce.flatten())))
+                show_im(conce)
+                conce = substract_ecto_contribution(radii, conce, set.frame_int)
+                inner = substract_ecto_contribution(radii, inner, set.frame_int)
+                outer = substract_ecto_contribution(radii, outer, set.frame_int)
+                show_im(conce)
 
-        conce_base = bandpass(conce, set.frame_int,
-                                min_freq=freq-range_freq[0],
-                                max_freq=freq+range_freq[1])
+                print('Correlation AFTER normalization: ',
+                        np.correlate(radii.flatten()-np.mean(radii.flatten()),
+                                     conce.flatten()-np.mean(conce.flatten())))
+            ##################################################################
+            ################# calc phase of oscillation ######################
+            ##################################################################
+            radius_base = bandpass(radii, set.frame_int,
+                                    min_freq=freq-range_freq[0],
+                                    max_freq=freq+range_freq[1])
 
-        phase_radius, _, _ = extract_phase(radius_base, file_name, 'radius')
-        phase_conce, _, _  = extract_phase(conce_base, file_name, 'concentration')
+            conce_base = bandpass(conce, set.frame_int,
+                                    min_freq=freq-range_freq[0],
+                                    max_freq=freq+range_freq[1])
+
+            phase_radius, _, _ = extract_phase(radius_base, file_name, 'radius')
+            phase_conce, _, _  = extract_phase(conce_base, file_name, 'concentration')
 
 
 
-        ##################################################################
-        ############ bandpass kymographs before binning ##################
-        ##################################################################
-        radii = bandpass(radii, set.frame_int,  min_freq=freq-range_freq[0],
-                                                max_freq=freq+range_freq[1])
-        conce = bandpass(conce, set.frame_int,  min_freq=freq-range_freq[0],
-                                                max_freq=freq+range_freq[1])
-        inner = bandpass(inner, set.frame_int,  min_freq=freq-range_freq[0],
-                                                max_freq=freq+range_freq[1])
-        outer = bandpass(outer, set.frame_int,  min_freq=freq-range_freq[0],
-                                                max_freq=freq+range_freq[1])
+            ##################################################################
+            ############ bandpass kymographs before binning ##################
+            ##################################################################
+            radii = bandpass(radii, set.frame_int,  min_freq=freq-range_freq[0],
+                                                    max_freq=freq+range_freq[1])
+            conce = bandpass(conce, set.frame_int,  min_freq=freq-range_freq[0],
+                                                    max_freq=freq+range_freq[1])
+            inner = bandpass(inner, set.frame_int,  min_freq=freq-range_freq[0],
+                                                    max_freq=freq+range_freq[1])
+            outer = bandpass(outer, set.frame_int,  min_freq=freq-range_freq[0],
+                                                    max_freq=freq+range_freq[1])
 
 
-        ##################################################################
-        ######################## Phase dependence ########################
-        ##################################################################
-        titles = ['radius', 'concentration', 'inner', 'outer']
-        colors = ['orange', 'blue', 'darkblue', 'lightskyblue']
-        kymos  = [radii, conce, inner, outer]
+            ##################################################################
+            ######################## Phase dependence ########################
+            ##################################################################
+            titles = ['radius', 'concentration', 'inner', 'outer']
+            colors = ['orange', 'blue', 'darkblue', 'lightskyblue']
+            kymos  = [radii, conce, inner, outer]
 
-        plot_kymographs(kymos, titles, file_name, set.frame_int)
-
-
-        phase_shift = phase_average(phase_radius, kymos, titles, colors,
-                                    file_name)
+            plot_kymographs(kymos, titles, file_name, set.frame_int)
 
 
-        ##################################################################
-        #################### Fourier spectrum  ###########################
-        ##################################################################
-        power_spec(radii, set.frame_int, file_name, 'radius')
-        power_spec(conce, set.frame_int, file_name, 'concentration')
-
-        ##################################################################
-        ######################### correlations ###########################
-        ##################################################################
-        min_k, max_k = correlate_phase(radii, conce,
-                                        file_name, 'kymos',
-                                        upsample_t=10, upsample_x=3,
-                                        frame_int=set.frame_int)
+            phase_shift = phase_average(phase_radius, kymos, titles, colors,
+                                        file_name)
 
 
-        min_p, max_p = correlate_phase(phase_radius, phase_conce,
-                                        file_name, 'phases',
-                                        upsample_t=10, upsample_x=3,
-                                        frame_int=set.frame_int)
+            ##################################################################
+            #################### Fourier spectrum  ###########################
+            ##################################################################
+            power_spec(radii, set.frame_int, file_name, 'radius')
+            power_spec(conce, set.frame_int, file_name, 'concentration')
+
+            ##################################################################
+            ######################### correlations ###########################
+            ##################################################################
+            min_k, max_k = correlate_phase(radii, conce,
+                                            file_name, 'kymos',
+                                            upsample_t=10, upsample_x=3,
+                                            frame_int=set.frame_int)
 
 
-        ##################################################################
-        ######################### Save in txt ############################
-        ##################################################################
-        if SAVE:
-            if not os.path.exists('time_shifts_data_sets'):
-                os.mkdir('time_shifts_data_sets')
+            min_p, max_p = correlate_phase(phase_radius, phase_conce,
+                                            file_name, 'phases',
+                                            upsample_t=10, upsample_x=3,
+                                            frame_int=set.frame_int)
 
-            data_sets_summary = 'time_shifts_data_sets/time_shift_' + color +'.txt'
-            if not os.path.isfile(data_sets_summary):
-                with open(data_sets_summary, "w") as out_var:
-                    out_var.write('# data_set \t label \t phase_radius' +
-                                    '\t phase_conc \t phase_inner' +
-                                    '\t phase_outer \t min_kymo \t max_kymo' +
-                                     '\t min_phase \t max_phase \n')
 
-            with open(data_sets_summary, "a") as out_var:
-                out_var.write(set_keyword +
-                                '\t' + str(label) +
-                                '\t' + str(phase_shift[0]) +
-                                '\t' + str(phase_shift[1]) +
-                                '\t' + str(phase_shift[2]) +
-                                '\t' + str(phase_shift[3]) +
-                                '\t' + str(min_k) +
-                                '\t' + str(max_k) +
-                                '\t' + str(min_p) +
-                                '\t' + str(max_p) + '\n')
+            ##################################################################
+            ######################### Save in txt ############################
+            ##################################################################
+            if SAVE:
+                if not os.path.exists('time_shifts_data_sets'):
+                    os.mkdir('time_shifts_data_sets')
+
+                data_sets_summary = 'time_shifts_data_sets/time_shift_' + color +'.txt'
+                if not os.path.isfile(data_sets_summary):
+                    with open(data_sets_summary, "w") as out_var:
+                        out_var.write('# data_set \t label \t phase_radius' +
+                                        '\t phase_conc \t phase_inner' +
+                                        '\t phase_outer \t min_kymo \t max_kymo' +
+                                         '\t min_phase \t max_phase \n')
+
+                with open(data_sets_summary, "a") as out_var:
+                    out_var.write(set_keyword +
+                                    '\t' + str(label) +
+                                    '\t' + str(phase_shift[0]) +
+                                    '\t' + str(phase_shift[1]) +
+                                    '\t' + str(phase_shift[2]) +
+                                    '\t' + str(phase_shift[3]) +
+                                    '\t' + str(min_k) +
+                                    '\t' + str(max_k) +
+                                    '\t' + str(min_p) +
+                                    '\t' + str(max_p) + '\n')
 
 
 if __name__ == '__main__':

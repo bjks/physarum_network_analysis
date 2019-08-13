@@ -32,7 +32,6 @@ print('>> Reading...')
 for set, t in zip(data_sets, t_arr):
     print(' >>', t )
     print(set.file_dat)
-    concentration = np.load(set.file_dat + '.npz')['concentration']
     local_radii   = np.load(set.file_dat + '.npz')['local_radii']
     mask = np.load(set.file_dat + '.npz')['mask']
     skeleton = np.load(set.file_dat + '.npz')['skeleton']
@@ -42,7 +41,7 @@ for set, t in zip(data_sets, t_arr):
         texas_clean = np.load(set.file_dat + '.npz')['texas_clean']
         rd = np.load(set.file_dat + '.npz')['rel_dist']
 
-        image = np.where(rd<1, calc_ratio(green_clean, texas_clean), 0)
+        image = calc_ratio(green_clean, texas_clean)
 
     elif keyword == 'raw_net':
         image = np.load(set.file_dat + '.npz')['network_clean']
@@ -60,9 +59,13 @@ for set, t in zip(data_sets, t_arr):
 
 
     elif keyword == 'concentration':
+        concentration = np.load(set.file_dat + '.npz')['concentration']
+
         image = tube_radius_at_point(mask, skeleton, concentration)
 
     elif keyword == 'norm_conc':
+        concentration = np.load(set.file_dat + '.npz')['concentration']
+
         norm_conc = calc_ratio(concentration, local_radii)
         image = tube_radius_at_point(mask, skeleton, norm_conc)
 

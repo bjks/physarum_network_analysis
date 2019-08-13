@@ -161,12 +161,11 @@ def extract_skeleton(mask, method='medial_axis', branch_thresh=50):
     # thinning necessary since nodes that lost a branch are wider that 1px
     medial_axis = morph.skeletonize(medial_axis)
 
-    selem = morph.disk(5)
-
-    new = 3 * morph.dilation(medial_axis, selem) + mask
-    # new = medial_axis *3 + mask
-    plt.imshow(new,cmap='Blues') # [750:950, 500:700]
-    plt.show()
+    # selem = morph.disk(5)
+    # new = 3 * morph.dilation(medial_axis, selem) + mask
+    # # new = medial_axis *3 + mask
+    # plt.imshow(new,cmap='Blues') # [750:950, 500:700]
+    # plt.show()
 
     return medial_axis
 
