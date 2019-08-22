@@ -4,9 +4,7 @@ import skimage.morphology as morph
 import os
 from analysis.plotting import *
 from multiprocessing.dummy import Pool as ThreadPool
-from dask import compute, delayed
 
-from dask.distributed import Client
 
 def process_ratiometric(set, use_ref_for_mask = True):
     print("ratiometric: ", set.file_dat)
@@ -28,7 +26,7 @@ def process_ratiometric(set, use_ref_for_mask = True):
     mask = extract_network(mask, set.extract)
 
     ### skeleton, radii ### add branch_thresh to config files?!
-    skeleton = extract_skeleton(mask, method='medial_axis', branch_thresh=150)
+    skeleton = extract_skeleton(mask, method='skeletonize', branch_thresh=500)
 
 
     local_radii = extract_radii(mask, skeleton)

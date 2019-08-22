@@ -61,11 +61,15 @@ def run_skeleton():
 
 def run_phase():
     com  =  'qsub -v NAME=' + NAME + to_qsub + 'qsub_phase.sh'
-
     print(com)
     if sys.platform.startswith('linux'):
         os.system(com)
 
+def run_snr():
+    com  =  'qsub -v NAME=' + NAME + to_qsub + 'qsub_snr.sh'
+    print(com)
+    if sys.platform.startswith('linux'):
+        os.system(com)
 
 ###################################################
 def check_and_wait(sec, script):
@@ -83,5 +87,6 @@ check_and_wait(100, 'czi_')
 run_ratiometric()
 check_and_wait(100, 'ratiomet')
 run_skeleton()
+run_snr()
 check_and_wait(100, 'skelet')
 run_phase()

@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 
 import skimage.morphology as morph              # skeleton
 from skimage.measure import regionprops         # extract_network
+from skimage.filters import threshold_otsu      # mask
 
 
 from scipy import ndimage as ndi                    # gaussian_filter
@@ -43,16 +44,26 @@ def show_im(image):
 # mask consists of doubles to avoid stupid buck in the future,
 # although it costs some storage...
 
-def create_mask(dye, sig, thresh, halo_sig):
+def create_mask(dye, sig, thresh=None, halo_sig=None):
+    ### if no threshold is given, thresh is determined using Otsu’s method
+    if thresh == None:
+        mask = ndi.gaussian_filter(dye, sigma=sig)
+        thresh = threshold_otsu(bf)
+        mask = np.where(dye > thresh, 1., 0.)
+
+
     ### if halo_sig is given the local background is estimated and used for mask
-    if halo_sig != None:
+    elif halo_sig != None:
         halo = ndi.gaussian_filter(dye, sigma=halo_sig)
         mask = ndi.gaussian_filter(dye, sigma=sig)
         mask = np.where(mask > thresh * halo, 1., 0.)
+
+
     ### pixels are compared to mean of entire image
     else:
         mask = ndi.gaussian_filter(dye, sigma=sig)
         mask = np.where(mask > thresh*(np.mean(dye)), 1., 0.)
+
     return mask
 
 def extract_network(mask, n):

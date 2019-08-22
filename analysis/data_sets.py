@@ -70,7 +70,7 @@ import configparser
 import json
 
 class data(data_paths):
-    def __init__(self, file_name, no=1, method='', color='tg'):
+    def __init__(self, file_name, no=1, method='', color='sep'):
 
         config = configparser.ConfigParser()
         config_file = 'config/' + file_name + '.ini'
@@ -108,7 +108,7 @@ class data(data_paths):
         self.first          = params.getint('first', 1)
         self.last           = params.getint('last')
 
-        self.seed_positions = json.loads(params.get('seed_positions'))
+        self.seed_positions = json.loads(params.get('seed_positions', '[[1000, 700]]'))
 
         image_prefix        = params.get('image_prefix')
         texas               = params.get('texas', '')

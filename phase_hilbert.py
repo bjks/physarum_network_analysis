@@ -153,12 +153,13 @@ def get_kymo(kymos_data, keyword, frame_int, align_keyword='reference_point',
             times=(None,None), positions=(None, None)):
 
     alignment = kymos_data['alignment']
+
     kymo      = kymos_data[keyword]
 
     if align_keyword == None:
         return np.transpose(kymo)
-
-    kymo =align_kymo(kymo, align_keyword, alignment=alignment)
+                
+    kymo = align_kymo(kymo, align_keyword, alignment=alignment)
     kymo = np.transpose(crop_aligned_kymo(kymo))
 
     kymo = kymo[positions[0]:positions[1], times[0]:times[1]]
@@ -418,14 +419,14 @@ def main():
         radii = get_kymo(kymos_data, 'kymo_local_radii', set.frame_int,
                         align_keyword, times=times, positions=positions)
 
-        kymo_c_green = get_kymo(kymos_data, 'kymo_c_green', set.frame_int,
+        kymo_c_green    = get_kymo(kymos_data, 'kymo_c_green', set.frame_int,
                         align_keyword, times=times, positions=positions)
         kymo_inner_green = get_kymo(kymos_data, 'kymo_inner_green',  set.frame_int,
                         align_keyword, times=times, positions=positions)
         kymo_outer_green = get_kymo(kymos_data, 'kymo_outer_green',  set.frame_int,
                         align_keyword, times=times, positions=positions)
 
-        kymo_c_texas = get_kymo(kymos_data, 'kymo_c_texas', set.frame_int,
+        kymo_c_texas    = get_kymo(kymos_data, 'kymo_c_texas', set.frame_int,
                         align_keyword, times=times, positions=positions)
         kymo_inner_texas = get_kymo(kymos_data, 'kymo_inner_texas',  set.frame_int,
                         align_keyword, times=times, positions=positions)
