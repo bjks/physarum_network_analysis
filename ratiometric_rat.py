@@ -78,10 +78,12 @@ def process_ratiometric(set, use_ref_for_mask = True):
 def main(): ## python3 ratiometric.py <keyword> <first> <last(+1)>
 
     set_keyword = os.sys.argv[1]
+    start       = int(os.sys.argv[2])
+    stop        = int(os.sys.argv[3])
     method  = 'inter_mean'
 
     for order in ['tg', 'gt']:
-        data_sets = [data(set_keyword, i, method, color=order) for i in range( int(os.sys.argv[2]),int(os.sys.argv[3]) )]
+        data_sets = [data(set_keyword, i, method, color=order) for i in range(start, stop)]
 
         for set in data_sets:
             print(set.file_dat)

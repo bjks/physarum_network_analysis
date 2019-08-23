@@ -42,11 +42,16 @@ def plot_samples_network(data_sets, show=True):
 def main():
 
     set_keyword = os.sys.argv[1]
-    sample_step = int(os.sys.argv[5])
-    method = 'inter_mean'
-    color =  str(os.sys.argv[2])
+    color       =  str(os.sys.argv[2])
 
-    data_sets = [data(set_keyword, i, method, color=color) for i in np.arange( int(os.sys.argv[3]),int(os.sys.argv[4]), sample_step )]
+    start       = int(os.sys.argv[3])
+    stop        = int(os.sys.argv[4])
+    sample_step = int(os.sys.argv[5])
+
+
+    method = 'inter_mean'
+
+    data_sets = [data(set_keyword, i, method, color=color) for i in np.arange(start, stop, sample_step )]
 
     # data_sets = [data(set_keyword, i, method, order) for i in np.arange(2,3)]
 

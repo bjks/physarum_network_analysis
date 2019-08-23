@@ -54,9 +54,10 @@ def bin_data(r, rd, c, r_bins, rd_bins):
 def main():
     set_keyword = os.sys.argv[1]
     step        = int(os.sys.argv[2])
+    color       = 'sep'
     method      = 'inter_mean'
 
-    data_sets = [data(set_keyword, i, method=method) for i in np.arange(data(set_keyword).first, data(set_keyword).last, step)]
+    data_sets = [data(set_keyword, i, color=color, method=method) for i in np.arange(data(set_keyword).first, data(set_keyword).last, step)]
     print(np.arange(data(set_keyword).first, data(set_keyword).last, step))
 
     radius, rel_dist, green, texas, ratio = collect_data(data_sets)

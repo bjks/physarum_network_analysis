@@ -21,7 +21,7 @@ def main():
     # set_inds = np.arange(data(set_keyword).first, data(set_keyword).last, step)
     set_inds = np.arange(data(set_keyword).first, 200, step)
 
-    data_sets = [data(set_keyword, i, color='tg', method=method) for i in set_inds]
+    data_sets = [data(set_keyword, i, color='sep', method=method) for i in set_inds]
 
     area            = sum_images(data_sets, 'mask')
     # volume          = sum_images(data_sets, 'texas_clean')

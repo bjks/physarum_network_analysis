@@ -54,7 +54,11 @@ def plot_samples(data_sets, show):
 def main():
 
     set_keyword = os.sys.argv[1].strip()
+    
+    start       = int(os.sys.argv[2])
+    stop        = int(os.sys.argv[3])
     sample_step = int(os.sys.argv[4])
+
     method = 'inter_mean'
     order = 'sep'
     data_sets = [data(set_keyword, i, method, order) for i in np.arange( int(os.sys.argv[2]),int(os.sys.argv[3]), sample_step )]
