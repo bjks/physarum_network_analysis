@@ -37,8 +37,8 @@ def process_ratiometric(set, use_ref_for_mask = True):
     green_clean = np.multiply(green, mask)
     texas_clean = np.multiply(texas, mask)
 
-    # _, green_clean = remove_spots(green_clean, mask, set.spots_radius, set.thresh_spots)
-    # _, texas_clean = remove_spots(texas_clean, mask, set.spots_radius, set.thresh_spots)
+    _, green_clean = remove_spots(green_clean, mask, set.spots_radius, set.thresh_spots)
+    _, texas_clean = remove_spots(texas_clean, mask, set.spots_radius, set.thresh_spots)
 
 
     ratio                          = calc_ratio(green_clean, texas_clean)
@@ -85,7 +85,7 @@ def main(): ## python3 ratiometric.py <keyword> <first> <last(+1)>
     stop        = int(os.sys.argv[3])
     method  = 'inter_mean'
 
-    data_sets = [data(set_keyword, i, method, color='sep') for i in range( start, stop )]
+    data_sets = [data(set_keyword, i, method, color='sep') for i in range(start, stop)]
 
     for set in data_sets:
         process_ratiometric(set)
