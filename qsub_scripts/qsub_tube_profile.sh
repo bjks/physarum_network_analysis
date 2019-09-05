@@ -7,6 +7,6 @@
 #$ -q grotrian.q
 #$ -l h=!grotrian19
 #$ -V
-#$ -o /data.bpm/bksche/std_out
-#$ -e /data.bpm/bksche/std_err
+#$ -o /data.bpm/bksche/std/std_tube_out
+#$ -e /data.bpm/bksche/std/std_tube_err
 python3 /data.bpm/bksche/network_analysis/tube_profile.py ${NAME} ${NO}

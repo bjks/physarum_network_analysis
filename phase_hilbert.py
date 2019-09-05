@@ -158,7 +158,7 @@ def get_kymo(kymos_data, keyword, frame_int, align_keyword='reference_point',
 
     if align_keyword == None:
         return np.transpose(kymo)
-                
+
     kymo = align_kymo(kymo, align_keyword, alignment=alignment)
     kymo = np.transpose(crop_aligned_kymo(kymo))
 
@@ -364,6 +364,7 @@ def correlate_phase(kymo1, kymo2, file_name, title, upsample_t=1, upsample_x=1, 
 
     plt.xticks(t_positions,  (t_positions-nt/2)*frame_int/upsample_t)
     plt.yticks(x_positions,  (x_positions-nx/2)/upsample_x )
+    
 
     plt.colorbar()
     plt.grid(linestyle='-', linewidth=0.4)
@@ -455,11 +456,9 @@ def main():
         ########### substract  Ca_global(R) ################
         ####################################################
         if substract_ecto:
-            show_im(conce)
             conce = substract_ecto_contribution(radii, conce, set.frame_int)
             inner = substract_ecto_contribution(radii, inner, set.frame_int)
             outer = substract_ecto_contribution(radii, outer, set.frame_int)
-            show_im(conce)
         ##################################################################
         ################# calc phase of oscillation ######################
         ##################################################################

@@ -8,20 +8,16 @@ from analysis.data_sets import *
 ############################################
 NAME        = os.sys.argv[1]
 NO_SLICES   = int(os.sys.argv[2])
+MAX_FRAME   = 200
 ############################################
 ############################################
 
 to_qsub = ' ' + '/data.bpm/bksche/network_analysis/qsub_scripts/' # space at beginning
 
-
+############################################
 def command_ratiometric(a, b):
     return 'qsub -v NAME=' + NAME + ',START=' + str(a) + ',END=' + str(b) \
             + to_qsub + 'qsub_ratiometric.sh'
-
-def command_skeleton(no):
-    return 'qsub -v NAME=' + NAME + ',NO=' + str(no) + to_qsub + 'qsub_skeleton.sh'
-
-
 
 def run_ratiometric():
     name        = NAME
@@ -50,6 +46,10 @@ def run_ratiometric():
             os.system(command_ratiometric(last_sub, last_sub+1))
         last_sub +=1
 
+############################################
+
+def command_skeleton(no):
+    return 'qsub -v NAME=' + NAME + ',NO=' + str(no) + to_qsub + 'qsub_skeleton.sh'
 
 def run_skeleton():
     no_seed_positions   = len(data(NAME).seed_positions)
@@ -58,18 +58,31 @@ def run_skeleton():
         if sys.platform.startswith('linux'):
             os.system(command_skeleton(i))
 
+def run_snr():
+    com  =  'qsub -v NAME=' + NAME + to_qsub + 'qsub_snr.sh'
+    print(com)
+    if sys.platform.startswith('linux'):
+        os.system(com)
 
+def run_animation(key):
+    first, last = data(NAME).first, data(NAME).last
+    step = int((last - first)/MAX_FRAME)
+    com = 'qsub -v NAME=' + NAME + \
+                  ',KEY=' + key + \
+                  ',COL=' + 'sep'+ \
+                  ',NO='  + str(step) + to_qsub +  'qsub_animation.sh'
+    print(com)
+    if sys.platform.startswith('linux'):
+        os.system(com)
+
+
+############################################
 def run_phase():
     com  =  'qsub -v NAME=' + NAME + to_qsub + 'qsub_phase.sh'
     print(com)
     if sys.platform.startswith('linux'):
         os.system(com)
 
-def run_snr():
-    com  =  'qsub -v NAME=' + NAME + to_qsub + 'qsub_snr.sh'
-    print(com)
-    if sys.platform.startswith('linux'):
-        os.system(com)
 
 ###################################################
 def check_and_wait(sec, script):
@@ -85,8 +98,14 @@ def check_and_wait(sec, script):
 ####################################################################
 check_and_wait(100, 'czi_')
 run_ratiometric()
+
+
 check_and_wait(100, 'ratiomet')
 run_skeleton()
 run_snr()
+run_animation('skeleton')
+run_animation('raw')
+
+
 check_and_wait(100, 'skelet')
 run_phase()

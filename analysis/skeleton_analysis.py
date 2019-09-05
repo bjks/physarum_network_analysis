@@ -87,6 +87,9 @@ def extract_branch(file_dat, seed_position, quantities):
     label           = branches[seed_position[0], seed_position[1]]
     selected_branch = np.where(branches==label, 1, 0)
 
+    #### replace selected_branch with shortest_path between two selected endpoints?
+    # match 2 endpoints instead of seed_position ? (seed_position -> endpoints (2,2) )
+
     values_in_branch = []
     for q in quantities:
         values_in_branch.append(np.load(file_dat + '.npz')[q].astype(float) * selected_branch)

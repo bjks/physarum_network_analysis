@@ -66,14 +66,16 @@ def anim_npz(data_sets, frame_step, keyword):
             texas_clean = np.load(set.file_dat + '.npz')['texas_clean']
 
             image = calc_ratio(green_clean, texas_clean)
+            temp_map = np.where(image == 0, np.nan, image)
 
             if set == data_sets[0]:
-                std_im, mean_im = np.nanstd(image), np.nanmean(image)
+                std_im, mean_im = np.nanstd(temp_map), np.nanmean(temp_map)
+
+                print(mean_im, std_im)
                 min, max = mean_im - 2*std_im, mean_im + 2*std_im
 
             cmap = mc.get_cmap('Spectral_r')
 
-            temp_map = np.where(image == 0, np.nan, image)
             temp_im = ax.imshow(temp_map, animated=True, cmap=cmap,
                                 vmin = min, vmax = max)
 
@@ -193,11 +195,19 @@ def main():
     set_keyword = os.sys.argv[1]
     keyword     = os.sys.argv[2]
     color       = os.sys.argv[3]
-    step        = int(os.sys.argv[4])
+    no          = int(os.sys.argv[4])
+
+    if no > 300:
+        step = 1
+        data_set_range = range(data(set_keyword).first, no)
+
+    else:
+        step = no
+        data_set_range = range(data(set_keyword).first, data(set_keyword).last)
+
 
     method = 'inter_mean'
 
-    data_set_range = range(data(set_keyword).first, data(set_keyword).last)
     # data_set_range = range(1, 13)
 
     data_sets = [data(set_keyword, i, method=method, color=color) for i in data_set_range]

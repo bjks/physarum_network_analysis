@@ -84,7 +84,7 @@ def main(): ## python3 skeleton.py <seed index (0,...)>
 
     set_keyword = os.sys.argv[1]
     label       = int(os.sys.argv[2])
-    
+
     seed_position = data(set_keyword).seed_positions[label]
 
     data_sets = [data(set_keyword, i, method, color='sep') for i in range(data(set_keyword).first, data(set_keyword).last)]

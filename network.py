@@ -15,18 +15,19 @@ def process_network(set):
     elif set.color=='bf':
         network = invert_bf(read_file(set.file_raw))
 
-    mask = create_mask(network, set.sigma, set.threshold, set.halo_sig)
+    mask        = create_mask(network, set.sigma, set.threshold, set.halo_sig)
+    mask        = extract_network(mask, set.extract)
 
-    mask = extract_network(mask, set.extract)
+    skeleton    = extract_skeleton(mask, method='medial_axis', branch_thresh=150)
+
+    local_radii                    = extract_radii(mask, skeleton)
+
+    rel_dist, radii_map            = relative_distance(skeleton, mask, local_radii)
 
     network_clean = np.multiply(network, mask)
 
     _, network_clean     = remove_spots(network_clean, mask, set.spots_radius, set.thresh_spots)
 
-    skeleton                       = medial_axis(mask, method='medial_axis', branch_thresh=150)
-    local_radii                    = extract_radii(mask, skeleton)
-
-    rel_dist, radii_map            = relative_distance(skeleton, mask, local_radii)
 
 
     if set.method == 'disk_mean':
