@@ -14,8 +14,8 @@ def command_network(name, a, b, col):
     return 'qsub -v NAME=' + name + ',COL=' + str(col) + \
             ',START=' + str(a) + ',END=' + str(b) + to_qsub + 'qsub_network.sh'
 
-def command_skeleton(name, no, col):
-    return 'qsub -v NAME=' + name + ',COL=' + str(col) + \
+def command_skeleton(name, no):
+    return 'qsub -v NAME=' + name + \
             ',NO=' + str(no) + to_qsub + 'qsub_skeleton.sh'
 
 # def command_skeleton_network(name, no, col):
@@ -94,15 +94,14 @@ def run_network():
 
 def run_skeleton():
     name                = os.sys.argv[2]
-    col                 = os.sys.argv[3]
 
     set                 = data(name)
     no_seed_positions   = len(data(name).seed_positions)
 
     for i in range(no_seed_positions):
-        print('Seed index: ', i, 'Color: ', col)
+        print('Seed index: ', i)
         if sys.platform.startswith('linux'):
-            os.system(command_skeleton(name, i, col))
+            os.system(command_skeleton(name, i))
 
 # def run_skeleton_network():
 #     name                = os.sys.argv[2]

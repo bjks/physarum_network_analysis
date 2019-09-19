@@ -2,9 +2,11 @@ import numpy as np
 import skimage.morphology as morph
 import copy
 from analysis.network_analysis import *
+from scipy import ndimage as ndi
 
 from analysis.plotting import *
 import os
+
 
 def closest_point_in_skel(seed, skeleton):
     coords_skel = np.transpose(np.nonzero(skeleton))
@@ -16,6 +18,25 @@ def label_branches(skeleton):
     nodes,_ = node_detection(skeleton)
     seperated_branches = skeleton - nodes
     return morph.label(seperated_branches, connectivity=2)
+
+
+def get_seeds_positions(set, range_only=False):
+    skeleton = np.load(set.file_dat + '.npz')['skeleton'].astype(int)
+
+    nodes, _ = node_detection(skeleton)
+    seperated_branches = skeleton - nodes
+
+    labels, no_l = morph.label(seperated_branches,
+                                            connectivity=2,
+                                            return_num=True)
+    if range_only:
+        return np.arange(no_l)
+
+    seed_positions = ndi.measurements.center_of_mass(seperated_branches,
+                                                    labels,
+                                                    np.arange(no_l)+1)
+
+    return np.array(seed_positions).astype(int), np.arange(no_l)
 
 
 def next_pixel(seed, skel):

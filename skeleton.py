@@ -5,36 +5,60 @@ from analysis.skeleton_analysis import *
 from analysis.plotting import *
 import os
 
-from multiprocessing.dummy import Pool as ThreadPool
+import multiprocessing
 import itertools
+
+
+def quantities_to_analyse(set, prefix=''):
+
+    quantities = np.array(['local_radii'])
+
+    if set.color=='bf' or set.color=='texas' or set.color=='green':
+        quantities = np.append(quantities,['concentration',
+                                            'concentration_inner',
+                                            'concentration_outer'])
+
+    else:
+        quantities = np.append(quantities,[ 'c_green',
+                                            'c_inner_green',
+                                            'c_outer_green',
+                                            'c_texas',
+                                            'c_inner_texas',
+                                            'c_outer_texas'])
+
+    if set.analyse_flow:
+        quantities = np.append(quantities, ['flow_field_x', 'flow_field_y'])
+
+    quantities = [prefix + q for q in quantities]
+
+    return quantities, range(len(quantities))
+
+
 
 
 ################## skeleton ####################
 def process_skeleton(data_sets, seed_position, label):
     last_endpoint = seed_position
 
-    kymos = [ [] for i in range(7) ]
+    quantities, q_range = quantities_to_analyse(data_sets[0])
 
+    kymo_names, _ =  quantities_to_analyse(data_sets[0], prefix='kymo_')
+
+    kymos = [ [] for i in quantities]
     path                = []
     alignment           = []
 
     for set in data_sets:
-        print(">> Analyse %s"  % (set.file_dat))
+        print(">> Analyse" + set.file_dat, label )
 
         values, seed_position, skeleton, l = extract_branch(set.file_dat,
                                                             seed_position,
-                                                            ['local_radii',
-                                                            'c_green',
-                                                            'c_inner_green',
-                                                            'c_outer_green',
-                                                            'c_texas',
-                                                            'c_inner_texas',
-                                                            'c_outer_texas'])
+                                                            quantities)
 
         along_path , path_coords, last_endpoint = follow_all_paths(values, last_endpoint)
         path.append(path_coords)
 
-        for i in range(7):
+        for i in q_range:
             kymos[i].append(along_path[i])
 
         ##### use first set as reference point: ####
@@ -51,17 +75,14 @@ def process_skeleton(data_sets, seed_position, label):
                 break
 
     ### save everything
+    to_save_dict = {n:k for n,k in zip(kymo_names, kymos)}
+
     np.savez_compressed(set.file_dat_set + '_branch_' + str(label),
                         branch_map          = branch_map,
-                        kymo_local_radii    = kymos[0],
-                        kymo_c_green        = kymos[1],
-                        kymo_inner_green    = kymos[2],
-                        kymo_outer_green    = kymos[3],
-                        kymo_c_texas        = kymos[4],
-                        kymo_inner_texas    = kymos[5],
-                        kymo_outer_texas    = kymos[6],
                         path                = path,
-                        alignment           = alignment)
+                        alignment           = alignment,
+                        **to_save_dict)
+    dat = np.load(set.file_dat_set + '_branch_' + str(label)+'.npz')
 
 
     ### plotting
@@ -79,16 +100,28 @@ def process_skeleton(data_sets, seed_position, label):
 ############### skeleton ################
 #########################################
 
-def main(): ## python3 skeleton.py <seed index (0,...)>
+def main(): ## python3 skeleton.py NAME
     method = 'inter_mean'
 
-    set_keyword = os.sys.argv[1]
-    label       = int(os.sys.argv[2])
+    set_keyword = os.sys.argv[1].strip()
+    # label       = int(os.sys.argv[2])
+    color       = 'sep'
 
-    seed_position = data(set_keyword).seed_positions[label]
+    data_sets = [data(set_keyword, i, method, color=color) for i in range(data(set_keyword).first, data(set_keyword).last)]
+    seed_positions, labels = get_seeds_positions(data_sets[0])
 
-    data_sets = [data(set_keyword, i, method, color='sep') for i in range(data(set_keyword).first, data(set_keyword).last)]
-    process_skeleton(data_sets, seed_position, label)
+    # seed_position = data(set_keyword).seed_positions[label]
+    # process_skeleton(data_sets, seed_positions, label)
+
+    num_threads = multiprocessing.cpu_count()
+    print("Number of detected cores: ", num_threads)
+
+    p = multiprocessing.Pool(num_threads)
+    p.starmap(process_skeleton, zip(itertools.repeat(data_sets),
+                                    seed_positions,
+                                    labels))
+    p.close()
+    p.join()
 
 
 if __name__ == "__main__":

@@ -4,6 +4,8 @@
 
 from analysis.network_analysis import *
 from analysis.data_sets import *
+from analysis.flow_analysis import *
+
 import skimage.morphology as morph
 import os
 import sys
@@ -47,13 +49,6 @@ def remove_outlier(arr, stds):
 
 
 
-def bring_to_shape_of(ar, ar_with_desired_shape):
-    return transform.resize(ar, np.shape(ar_with_desired_shape))
-
-
-
-def signed_avg(a, b, for_sign=1):
-    return np.sqrt( np.dot(a,a) + np.dot(b,b) ) * np.sign(for_sign)
 
 
 
@@ -73,55 +68,6 @@ def smooth_area(im, sigma):
     return area.astype(float)
 
 
-
-def flow_quantification(frame_a, frame_b, mask, upsample=2, window_size=40, sampling=20):
-
-    window  = (window_size * upsample,) * 2
-    step    = sampling * upsample
-
-    if upsample > 1:
-        mask    = ndi.zoom(mask.astype(bool), upsample, order=0)         # order 0!!
-        frame_a = ndi.zoom(frame_a, upsample, order=5)
-        frame_b = ndi.zoom(frame_b, upsample, order=5)
-
-    frame_a = np.multiply(frame_a, mask)
-    frame_b = np.multiply(frame_b, mask)
-
-    shape = np.shape(view_as_windows(frame_a, window_shape= window, step=step))
-
-    flow_field_x = np.zeros(shape[:2])
-    flow_field_y = np.zeros(shape[:2])
-
-    for i in range(shape[0]):
-        for j in range(shape[1]):
-            a = view_as_windows(frame_a, window_shape= window, step=step)[i,j]
-            b = view_as_windows(frame_b, window_shape= window, step=step)[i,j]
-
-            image_product = np.fft.fft2(a) * np.fft.fft2(b).conj()
-            cc_image = np.fft.ifft2(image_product)
-
-            corr = np.fft.fftshift(cc_image).real
-
-            if np.max(corr)>0:
-                shift = np.unravel_index(np.argmax(corr, axis=None), corr.shape)
-
-                flow_field_x[i,j] = shift[1]  - window[1]/2
-                flow_field_y[i,j] = shift[0]  - window[0]/2
-
-
-    flow_field_x/=upsample
-    flow_field_y/=upsample
-
-    flow_x = np.nanmean(flow_field_x)
-    flow_y = np.nanmean(flow_field_y)
-
-
-    avg_flow = signed_avg(flow_x, flow_y, for_sign = flow_x)
-
-    return avg_flow, flow_field_x, flow_field_y
-
-
-
 def detect_wall(i, data_sets, ref_range, plot_it=False):
 
     set = data_sets[i]
@@ -134,10 +80,10 @@ def detect_wall(i, data_sets, ref_range, plot_it=False):
 
     ### calc ectoplasm based on simple mask
     mask = create_mask(bf, set.sigma, set.threshold, set.halo_sig)
-    ectoplasm = smooth_area(mask, 30)
+    ectoplasm = smooth_area(mask, 50)
 
     ### calc radii based on medial axis in ectoplasm map
-    skel_ecto = extract_skeleton(ectoplasm, method='skeletonize', branch_thresh=250)
+    skel_ecto = extract_skeleton(ectoplasm, method='medial_axis', branch_thresh=250)
     r_ecto = np.sum(extract_radii(ectoplasm, skel_ecto))/np.sum(skel_ecto)
 
 
@@ -145,7 +91,7 @@ def detect_wall(i, data_sets, ref_range, plot_it=False):
     diff = np.var([invert_bf(read_file(ref.file_raw)) for ref in data_sets[i-ref_range:i+ref_range]], axis=0)
     motion = np.where(diff > np.mean(diff), 1., 0.)
 
-    endoplasm = smooth_area(motion, 30)
+    endoplasm = smooth_area(motion, 50)
 
     ### calc radii ...
     skel_endo = extract_skeleton(endoplasm, method='skeletonize', branch_thresh=250)
@@ -153,7 +99,11 @@ def detect_wall(i, data_sets, ref_range, plot_it=False):
 
     wall_map = 2 * ectoplasm + endoplasm
 
-    avg_flow, flow_field_x, flow_field_y = flow_quantification(bf, bf_next, ectoplasm)
+    avg_flow, flow_field_x, flow_field_y = flow_quantification(bf, bf_next,
+                                    ectoplasm, upsample=2,
+                                    window_size=40, sampling=40,
+                                    search_extend=10,
+                                    return_scalar_v=True)
 
 
     np.savez_compressed(set.file_dat,   wall_map        = wall_map,
@@ -169,7 +119,7 @@ def detect_wall(i, data_sets, ref_range, plot_it=False):
 
 
 ################################################################################
-def analyse_sets(index_ar, data_sets, ref_range, debug_mode=False):
+def analyse_sets(index_ar, data_sets, ref_range, debug_mode=True):
     if debug_mode:
         for i in index_ar:
             detect_wall(i, data_sets, ref_range)
@@ -204,21 +154,21 @@ def analyse_sets(index_ar, data_sets, ref_range, debug_mode=False):
 
 
 ################################################################################
-def plot_dynamics(data_sets, window_sli_avg):
+def plot_dynamics(data_sets, window_sli_avg, analyse_step):
     r_ectos = np.load(data_sets[0].file_dat_set + '.npz')['r_ectos']
     r_endos = np.load(data_sets[0].file_dat_set + '.npz')['r_endos']
     avg_flow = np.load(data_sets[0].file_dat_set + '.npz')['avg_flow']
 
     r_ectos = sliding_avg(r_ectos, window_sli_avg)
 
-    r_endos = remove_outlier(r_endos, 1)
+    r_endos = remove_outlier(r_endos, 2)
     r_endos = sliding_avg(r_endos, window_sli_avg)
     avg_flow = sliding_avg(avg_flow, window_sli_avg)
 
 
 
     print("Plotting...")
-    timestamps = np.arange(len(r_ectos)) * data_sets[0].frame_int
+    timestamps = np.arange(len(r_ectos)) * data_sets[0].frame_int * analyse_step
 
     ########## WALL #########
     fig, ax1 = plt.subplots()
@@ -286,7 +236,7 @@ def plot_samples(data_sets, index):
         plt.close()
 
         abs_flow = bring_to_shape_of(np.sqrt(   dat['flow_field_x']**2 + \
-                                                dat['flow_field_y']**2      ), \
+                                                dat['flow_field_y']**2), \
                                                 dat['wall_map']             )
 
         plt.imshow(bf/np.max(bf), cmap='gray')
@@ -299,12 +249,13 @@ def plot_samples(data_sets, index):
 
 
 ################################################################################
-def anim_npz(data_sets, frame_step):
+def anim_npz(data_sets, frame_step=1, time_step=1):
 
     data_sets = data_sets[::frame_step]
     set = data_sets[0]
 
-    timestamps = np.arange(len(data_sets)) * frame_step * data_sets[0].frame_int
+    timestamps = np.arange(len(data_sets)) \
+                            * frame_step * data_sets[0].frame_int * time_step
 
     fig, ax=plt.subplots()
 
@@ -349,7 +300,7 @@ def main(): ## python3 wall_bf.py <keyword>
 #########################################
     set_keyword     = os.sys.argv[1].strip()
 
-    ref_range       = 20
+    ref_range       = 10
     window_sli_avg  = 20
 
 
@@ -357,43 +308,48 @@ def main(): ## python3 wall_bf.py <keyword>
         analyse_bool        = True
         plot_dynamics_bool  = True
         animate_bool        = True
-        plot_step           = 100
 
-        frame_step = 15
+        analyse_step        = 10 #step between frames that are analysed
+
+        plot_step           = 10 #step between analysed(!) sets that are plotted
+
+        frame_step          = 1 #step between analysed(!) sets that are animated
+
         data_set_range = range(data(set_keyword).first, data(set_keyword).last)
 
 
     else:
-        analyse_bool        = False
+        analyse_bool        = True
         plot_dynamics_bool  = True
-        animate_bool        = False
+        animate_bool        = True
         plot_step           = 1
+        analyse_step        = 10
 
         frame_step = 1
-        data_set_range = range(1, 44)
+        data_set_range = range(1, 100)
 
 #########################################
 #########################################
 
 
-    data_sets = [data(set_keyword, i, method='wall', color='bf') for i in data_set_range]
-    index_ar = range(ref_range, len(data_sets)-ref_range)
+    data_sets = np.array([data(set_keyword, i, method='wall', color='bf') for i in data_set_range])
+    index_ar = np.arange(ref_range, len(data_sets)-ref_range, analyse_step)
+    print(index_ar)
 
     if analyse_bool:
         analyse_sets(index_ar, data_sets, ref_range)
 
 
     if plot_dynamics_bool:
-        plot_dynamics(data_sets, window_sli_avg)
+        plot_dynamics(data_sets, window_sli_avg, analyse_step)
 
 
     if plot_step != None:
-        inds_plot = np.arange(ref_range, len(data_sets)-ref_range, plot_step)
-        plot_samples(data_sets, inds_plot)
+        plot_samples(data_sets, index_ar[::plot_step])
 
 
     if animate_bool:
-        anim_npz(data_sets[ref_range:-ref_range], frame_step)
+        anim_npz(data_sets[index_ar], frame_step=frame_step, time_step=analyse_step)
 
 
 

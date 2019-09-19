@@ -5,11 +5,9 @@ import matplotlib.pyplot as plt
 from analysis.network_analysis import *
 from analysis.skeleton_analysis import *
 from analysis.data_sets import *
-from correlation import *
 from timeit import default_timer as timer
 import os
 from scipy.ndimage.filters import generic_filter
-from fft_analysis import *
 from phase_hilbert import *
 
 from multiprocessing.dummy import Pool as ThreadPool
@@ -41,11 +39,40 @@ def interpl_dye(raw1, raw2):
 ###############
 
 
+def read_file2(filename):
+    image = plt.imread(filename, 'tif').astype(float)
+    if image.ndim==3:
+        return greyscale(image)
+    else:
+        return image
 
+
+def add_borders(im):
+    new = np.vstack((np.zeros_like(im[0]),im, np.zeros_like(im[0])))
+    add = np.zeros_like(new[:,0])[:,None]
+    new = np.hstack((add ,new, add ))
+    return new
+
+def set_borders_to(arr, value=0):
+    new_array = arr.copy()
+    new_array[0,:]=value
+    new_array[-1,:]=value
+    new_array[:,0]=value
+    new_array[:,-1]=value
+    return new_array
+
+
+def invert_bf(image):
+    return - image + np.max(image)
 
 def main():
     # set_keyword = os.sys.argv[1]
     # data_sets = [data(set_keyword, i, method='inter_mean', color='tg') for i in range(data(set_keyword).first, data(set_keyword).last)]
+    im = read_file2('../image_data/2019-09-13/TR_CG1_flow_pgol2/TR_CG1_flow_pgol2_t001c5.tif')
+    mask = create_mask(im, 5)
+    skel = extract_skeleton(mask)
+    show_im(skel.astype(int))
+
     #
     # set = data_sets[0]
     #
@@ -62,29 +89,6 @@ def main():
     # plt.imshow(mask)
     # plt.show()
     #
-    n= 100
-    a = [np.arange(0,n) for i in range(100)]
-    t = np.transpose(0.001*np.array(a))
-    signal1 = 1.0 + 0.5 * np.sin(2.0*np.pi*3.0*t)
-
-
-    fig = plt.figure()
-
-
-    ax0 = fig.add_subplot(311)
-    ax0.plot(np.mean(signal1, axis=1))
-    ax0.set_xlabel("time in seconds")
-
-
-    ax1 = fig.add_subplot(312)
-    ax1.plot(np.mean(ndi.zoom(signal1, 3, order=5), axis=1))
-    ax1.set_xlabel("time in seconds")
-
-    ax2 = fig.add_subplot(313)
-
-    ax2.plot(np.mean(signal1, axis=1))
-
-    plt.show()
 
     # r = np.linspace(0, 1, 1000)
     # plt.plot(r, wall_height(1, r, 0.1))
@@ -135,12 +139,22 @@ def main():
     # plt.show()
 
     #
+
     #
     # n= 100
-    # a = [np.arange(0,n) for i in range(n)]
+    # dt = 2
+    # a = np.array([np.arange(0,n) * dt for i in range(n)])
     # a = np.transpose(np.array(a))
-    # x = -np.cos(a+0.5)
-    # y = np.cos(a)
+    # x = np.transpose(-np.cos(a/10 + 1))
+    # y = np.transpose(np.cos(a/10))
+    # # show_im(x)
+    # # show_im(y)
+    #
+    # SHOW = True
+    # correlate_phase(x, y, 'dummy', 'title', upsample_t=11, upsample_x=1, frame_int=dt)
+    #
+
+
     # plt.imshow(x)
     # plt.show()
     # fft_kymo(x)

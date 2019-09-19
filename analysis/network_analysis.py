@@ -136,6 +136,14 @@ def remove_branch(branch, endpoints, branch_thresh):
     else:
         return False
 
+def set_borders_to(arr, value=0):
+    new_array = arr.copy()
+    new_array[0,:]=value
+    new_array[-1,:]=value
+    new_array[:,0]=value
+    new_array[:,-1]=value
+    return new_array
+
 def extract_skeleton(mask, method='medial_axis', branch_thresh=50):
 
     if method=='medial_axis':
@@ -148,38 +156,35 @@ def extract_skeleton(mask, method='medial_axis', branch_thresh=50):
         # guarantee to get the center line in a pixel(!) image
         medial_axis = morph.skeletonize(mask)
 
+    if branch_thresh > 0:
+        nodes, endpoints = node_detection(medial_axis)
+        seperated_skel = medial_axis - nodes
 
-    if branch_thresh == 0:
-        return medial_axis
+        seper_l, no_l = morph.label(seperated_skel, connectivity=2, return_num=True)
 
-    nodes, endpoints = node_detection(medial_axis)
-    seperated_skel = medial_axis - nodes
+        # iterate over branches
+        for l in range(1, no_l+1):
+            branch = np.where(seper_l==l, 1, 0)
+            # remove branches that don't connect anything and are shorter than
+            # branch_thresh
+            if remove_branch(branch, endpoints, branch_thresh):
+                medial_axis = np.where(branch==1, 0, medial_axis)
 
-    seper_l, no_l = morph.label(seperated_skel, connectivity=2, return_num=True)
+        # add nodes to conncect network again
+        medial_axis = np.logical_or(medial_axis, nodes)
+        # remove nodes that are not longer part of the network
+        medial_axis = morph.remove_small_objects(medial_axis, 6, connectivity=2)
 
-    # iterate over branches
-    for l in range(1, no_l+1):
-        branch = np.where(seper_l==l, 1, 0)
-        # remove branches that don't connect anything and are shorter than
-        # branch_thresh
-        if remove_branch(branch, endpoints, branch_thresh):
-            medial_axis = np.where(branch==1, 0, medial_axis)
+        # thinning necessary since nodes that lost a branch are wider that 1px
+        medial_axis = morph.skeletonize(medial_axis)
 
-    # add nodes to conncect network again
-    medial_axis = np.logical_or(medial_axis, nodes)
-    # remove nodes that are not longer part of the network
-    medial_axis = morph.remove_small_objects(medial_axis, 6, connectivity=2)
+        # selem = morph.disk(5)
+        # new = 3 * morph.dilation(medial_axis, selem) + mask
+        # # new = medial_axis *3 + mask
+        # plt.imshow(new,cmap='Blues') # [750:950, 500:700]
+        # plt.show()
 
-    # thinning necessary since nodes that lost a branch are wider that 1px
-    medial_axis = morph.skeletonize(medial_axis)
-
-    # selem = morph.disk(5)
-    # new = 3 * morph.dilation(medial_axis, selem) + mask
-    # # new = medial_axis *3 + mask
-    # plt.imshow(new,cmap='Blues') # [750:950, 500:700]
-    # plt.show()
-
-    return medial_axis
+    return set_borders_to(medial_axis, value=0)
 
 
 def extract_radii(mask, skeleton):
@@ -226,8 +231,9 @@ def estimate_background(dye, mask, halo_sig):
 
 def background_correction(dye, file_raw, sigma, lower_thresh, halo_sig):
 
-    if lower_thresh == None:
-        return dye
+
+    if np.size(file_raw)>1:
+        file_raw = file_raw[0]
 
     bf          = read_file(file_raw)
 
@@ -331,8 +337,10 @@ def circle_mean(dye, skeleton, mask, local_radii, relative_dist, div=0.5):
 
 
 def project_on_skeleton(dye, skeleton):
-    ### orth. projection on skeleton by finding the nearest point in skeleton
-    ### only a few points are averaged, thus the results are noisy
+    """ orth. projection on skeleton by finding the nearest point in skeleton
+    only a few points are averaged, thus the results are noisy
+    """
+
     intensity   = np.zeros_like(dye)
     no          = np.zeros_like(dye)
 
@@ -356,10 +364,17 @@ def project_on_skeleton(dye, skeleton):
 
 
 def inter_mean(dye, skeleton, mask, local_radii,
-                relative_dist, interval_size = 10, div = 0.5):
-    ### orth. projection on skeleton by finding the nearest point in skeleton
-    ### + average over nearest pixel in skeleton within interval <= 10 pixel
-    ### allow enough pixel to be considered such that "inner" "outer" can be returned
+                relative_dist, interval_size = 10, div = 0.5,
+                corr_for_missing_branches = False):
+    """ orth. projection on skeleton by finding the nearest point in skeleton
+     plus average over nearest pixel in skeleton within interval <= 10 pixel
+     allow enough pixel to be considered such that "inner" "outer" can be
+     returned.
+     corr_for_missing_branches -> removes pixels that belong to branches that
+     were removes
+     """
+
+    dye = np.where(relative_dist > 1, 0, dye)
 
     intensity_inner = np.zeros_like(dye)
     intensity_outer = np.zeros_like(dye)

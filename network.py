@@ -13,7 +13,11 @@ def process_network(set):
     elif set.color=='green':
         network = read_file(set.file_raw1)
     elif set.color=='bf':
-        network = invert_bf(read_file(set.file_raw))
+        if np.size(set.file_raw)>1:
+            file_raw = file_raw[0]
+        else:
+            file_raw = set.file_raw
+        network = invert_bf(read_file(file_raw))
 
     mask        = create_mask(network, set.sigma, set.threshold, set.halo_sig)
     mask        = extract_network(mask, set.extract)
@@ -29,13 +33,6 @@ def process_network(set):
     _, network_clean     = remove_spots(network_clean, mask, set.spots_radius, set.thresh_spots)
 
 
-
-    if set.method == 'disk_mean':
-        concentration, \
-        concentration_inner, \
-        concentration_outer = circle_mean(network_clean, skeleton, mask,
-                                            local_radii, rel_dist, div=0.5)
-
     if set.method == 'inter_mean':
         concentration, \
         concentration_inner, \
@@ -43,15 +40,43 @@ def process_network(set):
                                             local_radii, rel_dist,
                                             interval_size=50, div=0.5)
 
-    np.savez_compressed(set.file_dat,   network_clean       = network_clean,
-                                        skeleton            = skeleton,
-                                        local_radii         = local_radii,
-                                        mask                = mask,
-                                        rel_dist            = rel_dist,
-                                        radii_map           = radii_map,
-                                        concentration       = concentration,
-                                        concentration_inner = concentration_inner,
-                                        concentration_outer = concentration_outer)
+
+
+    map_names = np.array(['network_clean',
+                        'skeleton',
+                        'local_radii',
+                        'mask',
+                        'rel_dist',
+                        'radii_map',
+                        'concentration',
+                        'concentration_inner',
+                        'concentration_outer'])
+
+
+    maps =      np.array([network_clean,
+                        skeleton,
+                        local_radii,
+                        mask,
+                        rel_dist,
+                        radii_map,
+                        concentration,
+                        concentration_inner,
+                        concentration_outer])
+
+
+    if set.analyse_flow:
+        bf_frames = [invert_bf(read_file(file)) for file in set.file_raw]
+        flow_field_x, flow_field_y =  average_flow_over_frames(bf_frames, mask,
+                                                upsample=1, window_size=30,
+                                                sampling=20, search_extend=10)
+
+        map_names = np.append(map_names, ['flow_field_x', 'flow_field_y'])
+        maps      = np.append(maps, [flow_field_x, flow_field_y])
+
+
+    to_save_dict = {n:m for n,m in zip(map_names, maps)}
+
+    np.savez_compressed(set.file_dat,  **to_save_dict)
 
 
 
@@ -68,10 +93,7 @@ def main(): ## python3 ratiometric.py <keyword> <first> <last(+1)>
     data_sets = [data(set_keyword, i, method, color=color) for i in range( int(os.sys.argv[3]),int(os.sys.argv[4]) )]
 
     for set in data_sets:
-        print(set.file_dat)
         process_network(set)
-
-    print('Done')
 
 if __name__ == "__main__":
     main()

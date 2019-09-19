@@ -44,7 +44,7 @@ def anim_arr(ims, set, frame_step, keyword):
 
 
 def anim_npz(data_sets, frame_step, keyword):
-
+    frame_step = np.max([frame_step,1])
     data_sets = data_sets[::frame_step]
     set = data_sets[0]
 

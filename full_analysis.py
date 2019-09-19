@@ -15,6 +15,13 @@ MAX_FRAME   = 200
 to_qsub = ' ' + '/data.bpm/bksche/network_analysis/qsub_scripts/' # space at beginning
 
 ############################################
+
+def sub_command(com):
+    print(com)
+    if sys.platform.startswith('linux'):
+        os.system(com)
+
+
 def command_ratiometric(a, b):
     return 'qsub -v NAME=' + NAME + ',START=' + str(a) + ',END=' + str(b) \
             + to_qsub + 'qsub_ratiometric.sh'
@@ -48,21 +55,21 @@ def run_ratiometric():
 
 ############################################
 
-def command_skeleton(no):
-    return 'qsub -v NAME=' + NAME + ',NO=' + str(no) + to_qsub + 'qsub_skeleton.sh'
+# def command_skeleton(no):
+#     return 'qsub -v NAME=' + NAME + ',NO=' + str(no) + to_qsub + 'qsub_skeleton.sh'
 
 def run_skeleton():
-    no_seed_positions   = len(data(NAME).seed_positions)
-    for i in range(no_seed_positions):
-        print('Seed index: ', i)
-        if sys.platform.startswith('linux'):
-            os.system(command_skeleton(i))
+    com  =  'qsub -v NAME=' + NAME + to_qsub + 'qsub_skeleton.sh'
+    sub_command(com)
+    # no_seed_positions   = len(data(NAME).seed_positions)
+    # for i in range(no_seed_positions):
+    #     print('Seed index: ', i)
+    #     if sys.platform.startswith('linux'):
+    #         os.system(command_skeleton(i))
 
 def run_snr():
     com  =  'qsub -v NAME=' + NAME + to_qsub + 'qsub_snr.sh'
-    print(com)
-    if sys.platform.startswith('linux'):
-        os.system(com)
+    sub_command(com)
 
 def run_animation(key):
     first, last = data(NAME).first, data(NAME).last
@@ -71,17 +78,20 @@ def run_animation(key):
                   ',KEY=' + key + \
                   ',COL=' + 'sep'+ \
                   ',NO='  + str(step) + to_qsub +  'qsub_animation.sh'
-    print(com)
-    if sys.platform.startswith('linux'):
-        os.system(com)
+    sub_command(com)
+
+
+def run_tube_profile():
+    com  = 'qsub -v NAME=' + NAME + \
+                    ',NO=' + str(2) + to_qsub + 'qsub_tube_profile.sh'
+    sub_command(com)
 
 
 ############################################
 def run_phase():
     com  =  'qsub -v NAME=' + NAME + to_qsub + 'qsub_phase.sh'
-    print(com)
-    if sys.platform.startswith('linux'):
-        os.system(com)
+    sub_command(com)
+
 
 
 ###################################################
@@ -103,6 +113,7 @@ run_ratiometric()
 check_and_wait(100, 'ratiomet')
 run_skeleton()
 run_snr()
+run_tube_profile()
 run_animation('skeleton')
 run_animation('raw')
 
