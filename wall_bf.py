@@ -49,9 +49,11 @@ def remove_outlier(arr, stds):
 
 
 
-
-
-
+#
+#
+# use morph. closing?
+#
+#
 def smooth_area(im, sigma):
     area = ndi.gaussian_filter(im, sigma=sigma)
 
@@ -65,7 +67,16 @@ def smooth_area(im, sigma):
 
     area = extract_network(area, 1)
 
+
     return area.astype(float)
+
+
+def closing_area(im, r):
+    area = morph.closing(im, selem=morph.disk(r))
+    area = morph.remove_small_holes(area, area_threshold=int(1e5), connectivity=2)
+    area = extract_network(area, 1)
+    return area.astype(float)
+
 
 
 def detect_wall(i, data_sets, ref_range, plot_it=False):
@@ -80,7 +91,7 @@ def detect_wall(i, data_sets, ref_range, plot_it=False):
 
     ### calc ectoplasm based on simple mask
     mask = create_mask(bf, set.sigma, set.threshold, set.halo_sig)
-    ectoplasm = smooth_area(mask, 50)
+    ectoplasm = smooth_area(mask, 20)
 
     ### calc radii based on medial axis in ectoplasm map
     skel_ecto = extract_skeleton(ectoplasm, method='medial_axis', branch_thresh=250)
@@ -90,6 +101,7 @@ def detect_wall(i, data_sets, ref_range, plot_it=False):
     ### calc endoplasm based on temporal variance in each point
     diff = np.var([invert_bf(read_file(ref.file_raw)) for ref in data_sets[i-ref_range:i+ref_range]], axis=0)
     motion = np.where(diff > np.mean(diff), 1., 0.)
+
 
     endoplasm = smooth_area(motion, 50)
 
@@ -300,7 +312,7 @@ def main(): ## python3 wall_bf.py <keyword>
 #########################################
     set_keyword     = os.sys.argv[1].strip()
 
-    ref_range       = 10
+    ref_range       = 5
     window_sli_avg  = 20
 
 

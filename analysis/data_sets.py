@@ -3,9 +3,17 @@ import os
 import numpy as np
 
 
+############### Tools ###################
+def mk_mising_dir(path_name):
+    if not os.path.exists(path_name):
+        os.mkdir(path_name)
+    return path_name
+
 #####################################################
 ################ Data Structure #####################
 #####################################################
+
+
 
 class data_paths:
     def __init__(self, image_prefix, no, zeros, texas, green, bf):
@@ -32,6 +40,11 @@ class data_paths:
             dir_plots           = '../plots/'
 
 
+        for d in [dir_results, dir_plots]:
+            mk_mising_dir(d + self.path)
+            if self.subdir != None:
+                mk_mising_dir(d + self.path + '/' +self.subdir)
+
 
         if bf != None:
             bf = [x.strip() for x in bf.split()]
@@ -49,12 +62,6 @@ class data_paths:
 
 
 
-        for d in [dir_results, dir_plots]:
-            if not os.path.exists(d + self.path):
-                os.mkdir(d + self.path)
-            if self.subdir != None:
-                if not os.path.exists(d + self.path + '/' +self.subdir):
-                    os.mkdir(d + self.path + '/' +self.subdir)
 
 
         self.path_results   = '../results/'    + dir + '/'
@@ -68,13 +75,13 @@ class data_paths:
             set_file  += '_back_corr'
 
         self.file_dat       = self.path_results + full_file
-        self.file_dat_flow       = self.path_results + full_file + '_flow'
+        self.file_dat_flow  = self.path_results + full_file + '_flow'
 
         self.file_dat_set   = self.path_results + set_file
 
-        self.file_plot              = self.path_plots + full_file
+        self.file_plot              = mk_mising_dir(self.path_plots + 'samples/') + full_file
+        self.file_plot_tube_profile = mk_mising_dir(self.path_plots + 'tube_profile/') + set_file
         self.file_plot_set          = self.path_plots + set_file
-        self.file_plot_tube_profile = self.path_plots + 'tube_profile/'+set_file
 
 
 

@@ -27,15 +27,22 @@ def invert_bf(image):
 ###### visualization tools ######
 ### create diluted skeleton and masks the background for plotting ###
 def thick_skeleton(skeleton, times = 10):
-    selem = morph.disk(times)
-    thick_skeleton = skeleton.copy()
 
-    thick_skeleton = morph.dilation(skeleton, selem)
+    if times > 0:
+        selem = morph.disk(times)
+        thick_skeleton = morph.dilation(skeleton.astype(int), selem)
+
+    else:
+        thick_skeleton = skeleton.copy().astype(int)
+
     thick_skeleton = np.ma.masked_where(thick_skeleton == 0, thick_skeleton)
     return thick_skeleton
 
-def show_im(image):
-    plt.imshow(image)
+def show_im(image, skel=False):
+    if skel:
+        plt.imshow(thick_skeleton(image))
+    else:
+        plt.imshow(image)
     plt.colorbar()
     plt.show()
 
@@ -82,8 +89,8 @@ def extract_network(mask, n):
     return np.where(np.isin(labels, selected_labels), 1., 0.)
 
 #####################################
-######## image interpolation #######
-#?########## discontinued ?##########
+######## image interpolation ########
+########### discontinued!! ##########
 #####################################
 def interpl_masks(mask1, mask2):
     # finds outline in the center between the outlines of two maskss
@@ -144,17 +151,33 @@ def set_borders_to(arr, value=0):
     new_array[:,-1]=value
     return new_array
 
-def extract_skeleton(mask, method='medial_axis', branch_thresh=50):
+def reflect_boundaries(arr):
+    lr = np.fliplr(arr)
+    new = np.concatenate((lr, arr, lr), axis=1)
+    ud = np.flipud(new)
+    return np.concatenate((ud, new, ud), axis=0)
+
+def inverse_reflect_boundaries(arr):
+    return np.hsplit(np.vsplit(arr,3)[1], 3)[1]
+
+
+def extract_skeleton(mask, method='medial_axis', branch_thresh=50,
+                        extract=1, reflect=True):
+
+    refl_mask = reflect_boundaries(mask)
 
     if method=='medial_axis':
         # returns the line consiting of pixels that have 2 (or more)
         # nearest pixels; often many small branches emerge
-        medial_axis = morph.medial_axis(mask)
+        medial_axis = morph.medial_axis(refl_mask)
 
     elif method=='skeletonize':
         # returns the skeleton calculated via morph. thinning, which does not
         # guarantee to get the center line in a pixel(!) image
-        medial_axis = morph.skeletonize(mask)
+        medial_axis = morph.skeletonize(refl_mask)
+
+    medial_axis = inverse_reflect_boundaries(medial_axis)
+    medial_axis = set_borders_to(medial_axis, value=0)
 
     if branch_thresh > 0:
         nodes, endpoints = node_detection(medial_axis)
@@ -178,13 +201,8 @@ def extract_skeleton(mask, method='medial_axis', branch_thresh=50):
         # thinning necessary since nodes that lost a branch are wider that 1px
         medial_axis = morph.skeletonize(medial_axis)
 
-        # selem = morph.disk(5)
-        # new = 3 * morph.dilation(medial_axis, selem) + mask
-        # # new = medial_axis *3 + mask
-        # plt.imshow(new,cmap='Blues') # [750:950, 500:700]
-        # plt.show()
-
-    return set_borders_to(medial_axis, value=0)
+    medial_axis = extract_network(medial_axis, extract)
+    return medial_axis
 
 
 def extract_radii(mask, skeleton):
@@ -199,14 +217,14 @@ def disk_filter(dye, mask, r):
     dye_filtered = np.where(mask!=0, dye, np.nan) # 0 -> NaN (to be ignored)
 
     kernel = morph.disk(r)
-    dye_filtered = convolve_fft(dye_filtered, kernel, fill_value=np.nan)
+    dye_filtered = convolve_fft(dye_filtered, kernel, fill_value=np.nan,
+                                quiet=True)
 
     return np.nan_to_num(dye_filtered) # NaN -> 0
 
 
 def remove_spots(dye, mask, spots_sig, thresh_spots):
     #### calculate background ####
-    selem        = morph.disk(spots_sig)
     background   = disk_filter(dye, mask, spots_sig)
 
     #### calculate mask withou spots ####
@@ -363,9 +381,10 @@ def project_on_skeleton(dye, skeleton):
 
 
 
-def inter_mean(dye, skeleton, mask, local_radii,
-                relative_dist, interval_size = 10, div = 0.5,
-                corr_for_missing_branches = False):
+def inter_mean(dye, skeleton, mask, relative_dist,
+                interval_size = 10, div = 0.5,
+                corr_for_missing_branches = False,
+                return_only_conc = False):
     """ orth. projection on skeleton by finding the nearest point in skeleton
      plus average over nearest pixel in skeleton within interval <= 10 pixel
      allow enough pixel to be considered such that "inner" "outer" can be
@@ -374,7 +393,8 @@ def inter_mean(dye, skeleton, mask, local_radii,
      were removes
      """
 
-    dye = np.where(relative_dist > 1, 0, dye)
+    if corr_for_missing_branches:
+         dye = np.where(relative_dist > 1, 0, dye)
 
     intensity_inner = np.zeros_like(dye)
     intensity_outer = np.zeros_like(dye)
@@ -415,6 +435,9 @@ def inter_mean(dye, skeleton, mask, local_radii,
     concentration_outer = np.true_divide(intensity_outer, no_outer,
                                          out=np.zeros_like(dye),
                                          where=intensity_outer!=0)
+
+    if return_only_conc:
+        return disk_filter(concentration, skeleton, interval_size) * skeleton
 
 
     concentration         = disk_filter(concentration,

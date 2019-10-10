@@ -10,4 +10,4 @@
 #$ -V
 #$ -o /data.bpm/bksche/std/std_full_out
 #$ -e /data.bpm/bksche/std/std_full_err
-python3 /data.bpm/bksche/network_analysis/full_analysis.py 2019-09-18_pgol 50
+python3 /data.bpm/bksche/network_analysis/full_analysis.py ${NAME} 50

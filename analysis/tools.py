@@ -1,5 +1,14 @@
 import numpy as np
 
+def fft_kymo(signal, frame_int):
+
+    kymo_f  = np.fft.rfft(signal)
+
+    freq    = np.fft.rfftfreq(signal.shape[-1]) / frame_int
+    fourier = np.mean(kymo_f.real, axis=0)
+    plt.plot(freq, fourier)
+    plt.show()
+
 
 def fill_up_array(array, add1, add2):
 
@@ -46,10 +55,10 @@ def align_kymo(kymo, mode='start', alignment=None):
     return np.array(new_kymo)
 
 
-def crop_aligned_kymo(kymo):
-    new_kymo = []
-    for arr in np.transpose(kymo)[:]:
+def crop_nans(arr2d):
+    new_arr2d = []
+    for arr in arr2d[:]:
         if np.logical_not(np.isnan(arr).any()):
-            new_kymo.append(arr)
+            new_arr2d.append(arr)
 
-    return np.transpose(new_kymo)
+    return np.array(new_arr2d)

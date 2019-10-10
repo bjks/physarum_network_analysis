@@ -3,7 +3,7 @@ import skimage.morphology as morph
 import copy
 from analysis.network_analysis import *
 from scipy import ndimage as ndi
-
+from analysis.data_sets import *
 from analysis.plotting import *
 import os
 
@@ -57,6 +57,7 @@ def next_pixel(seed, skel):
     else:
         return None
 
+
 def find_branch_endpoints(branch, last_endpoint):
     # finds endpoint of branch that is closest to the point 'last_endpoint'
     _, ends = node_detection(branch)
@@ -79,6 +80,7 @@ def follow_path(selected_branch, last_endpoint):
         branch[seed[0],seed[1]] = 0
         seed = next_pixel(seed, branch)
     return path_vals, path_coords, last_endpoint
+
 
 def follow_all_paths(selected_branches, last_endpoint):
     # relurns values along the path given by selected_branches
@@ -116,3 +118,10 @@ def extract_branch(file_dat, seed_position, quantities):
         values_in_branch.append(np.load(file_dat + '.npz')[q].astype(float) * selected_branch)
 
     return values_in_branch, seed_position, skeleton, label
+
+
+def brach_datfile(set, label):
+    return set.file_dat_set + '_branch_' + str(label) + '.npz'
+
+def branch_plotpath(set,label):
+    return mk_mising_dir(set.file_plot_set + '_branch_' + str(label) + '/')

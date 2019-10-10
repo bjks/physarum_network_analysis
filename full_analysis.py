@@ -87,6 +87,13 @@ def run_tube_profile():
     sub_command(com)
 
 
+def run_read():
+    first, last = data(NAME).first, data(NAME).last
+    com = 'qsub -v NAME=' + NAME + \
+                  ',START=' + str(first) + \
+                  ',STOP=' + str(last) + \
+                  ',STEP='  + str(50) + to_qsub +  'qsub_read_rat.sh'
+
 ############################################
 def run_phase():
     com  =  'qsub -v NAME=' + NAME + to_qsub + 'qsub_phase.sh'
@@ -114,6 +121,7 @@ check_and_wait(100, 'ratiomet')
 run_skeleton()
 run_snr()
 run_tube_profile()
+run_read()
 run_animation('skeleton')
 run_animation('raw')
 

@@ -71,15 +71,15 @@ def main():
     _,_, t, t_std = bin_data(radius, rel_dist, texas, r_bins, rd_bins)
     _,_, r, r_std = bin_data(radius, rel_dist, ratio, r_bins, rd_bins)
 
-    c= plt.pcolormesh(r)
+    c = plt.pcolormesh(r)
     r_range = r_bins
-    plt.yticks(np.arange(len(r_range)), r_range)
+    plt.yticks(np.arange(len(r_range))[::5], r_range[::5])
     plt.xticks(np.linspace(0, len(rd_bins)-1, 6), [0, 0.2, 0.4, 0.6, 0.8, 1])
     plt.ylabel('radius (pixels)')
     plt.xlabel('relative distance r/R')
     plt.title('ratio')
     plt.colorbar(c)
-    filename = data(set_keyword).file_plot_set + '_grid_tube_profile.pdf'
+    filename = data(set_keyword).file_plot_tube_profile + '_grid_tube_profile.pdf'
     plt.savefig(filename, dpi=200)
 
     plt.show()
@@ -103,11 +103,11 @@ def main():
 
         ax1.legend()
         # ax1.legend(frameon=False)
-        ax1.set_xlabel('realtive distance r/R')
+        ax1.set_xlabel('relative distance r/R')
         ax1.set_ylabel('normalized profiles')
         ax2.set_ylabel('ratio')
         plt.title(str(r_bins[j]) + '<R<' + str(r_bins[j+1]) + ' pixels')
-        filename = data(set_keyword).file_plot_set + '_' + str(r_bins[j]) + '-' + str(r_bins[j+1]) + '_tube_profile.pdf'
+        filename = data(set_keyword).file_plot_tube_profile + '_' + str(r_bins[j]) + '-' + str(r_bins[j+1]) + '_tube_profile.pdf'
         plt.savefig(filename, dpi=200)
         # plt.show()
         plt.close()

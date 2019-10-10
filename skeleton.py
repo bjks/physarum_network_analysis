@@ -27,7 +27,7 @@ def quantities_to_analyse(set, prefix=''):
                                             'c_outer_texas'])
 
     if set.analyse_flow:
-        quantities = np.append(quantities, ['flow_field_x', 'flow_field_y'])
+        quantities = np.append(quantities, ['flow_x', 'flow_y'])
 
     quantities = [prefix + q for q in quantities]
 
@@ -89,9 +89,8 @@ def process_skeleton(data_sets, seed_position, label):
     if not os.path.exists(set.path_plots):
         os.mkdir(set.path_plots)
 
-    path_name = set.file_plot_set + '_branch_' + str(label) + '/'
-    if not os.path.exists(path_name):
-        os.mkdir(path_name)
+    path_name = branch_plotpath(set, label)
+
 
     plot_branch(branch_map, label, path_name)
 
