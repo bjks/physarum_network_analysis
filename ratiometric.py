@@ -56,7 +56,7 @@ def process_ratiometric(set):
                                     interval_size=50, div=0.5,
                                     corr_for_missing_branches = True)
 
-    # gathering data to create dictionary for np.savez, data are not copied!
+    # gathering data to create dictionary for np.savez, data is not copied!
     maps = [('set', set),
                 ('green_clean', green_clean),
                 ('texas_clean', texas_clean),
@@ -69,7 +69,7 @@ def process_ratiometric(set):
                 ('c_inner_green', c_inner_green),
                 ('c_outer_green', c_outer_green),
                 ('c_texas', c_texas),
-                ('c_inner_texas', c_inner_green),
+                ('c_inner_texas', c_inner_texas),
                 ('c_outer_texas', c_outer_texas)]
 
 

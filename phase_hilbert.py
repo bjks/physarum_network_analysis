@@ -187,6 +187,9 @@ def main():
                                             set.symm_setup,
                                             'outer', cmap_c, 'darkblue')
 
+
+
+
         if set.analyse_flow:
             flow_x = flow_x.crop_kymo()
             flow_x.color = 'lightgreen'
@@ -244,6 +247,10 @@ def main():
         radii_b, conce_b, inner_b, outer_b = \
              [k.bandpass(band_f1, band_f2) for k in [radii, conce, inner, outer]]
 
+
+        phase_shift_map = phase_shift2d(radii_b, conce_b, filename, upsample=2,
+                            window_size=100, sampling=100, search_range_in_s=100)
+
         plot_kymograph([radii_b, conce_b, inner_b, outer_b], filename)
 
 
@@ -267,10 +274,8 @@ def main():
                                 upsample_t=10, upsample_x=1,
                                 detrend='gauss')
 
-        # phase_shift_map = phase_shift2d(radii, conce, filename, upsample=1,
-        #                     window_size=200, sampling=200, search_range_in_s=40)
 
-        # show_im(phase_shift_map)
+        show_im(phase_shift_map)
 
         if set.analyse_flow:
             _ = correlate_phase(conce, flow_y, filename, 'flow-concentartion',

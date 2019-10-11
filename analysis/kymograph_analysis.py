@@ -656,7 +656,12 @@ def phase_shift2d(kymo_a, kymo_b, filename, upsample=1, window_size=50,
             a = a_windows[i,j][s_min:s_max, s_min:s_max]
             b = b_windows[i,j]
 
+            show_im(a)
+            show_im(b)
+
             corr2d = match_template(b,a)
+            show_im(corr2d)
+
             corr1d = corr2d[int(corr2d.shape[0]/2)]
 
             plt.plot(corr1d)

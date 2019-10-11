@@ -39,12 +39,14 @@ def thick_skeleton(skeleton, times = 10):
     return thick_skeleton
 
 def show_im(image, skel=False):
+    plt.close()
     if skel:
         plt.imshow(thick_skeleton(image))
     else:
         plt.imshow(image)
     plt.colorbar()
     plt.show()
+    plt.close()
 
 #####################################
 ############# Creating mask #########

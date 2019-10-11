@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 
 
 def processing_visualization(file_dat, file_plot, analyse_flow,show=False):
+    print("Plooting ", file_dat)
     data = np.load(file_dat + '.npz')
 
     fig, axes = plt.subplots(2,3, sharex=True, sharey=True)
@@ -57,15 +58,15 @@ def processing_visualization(file_dat, file_plot, analyse_flow,show=False):
     if show:
         plt.show()
     plt.close()
+    print("Saved", file_plot)
+
 
 
 
 def plot_samples(data_sets, show):
-    if not os.path.exists(data_sets[0].path_plots):
-        os.mkdir(data_sets[0].path_plots)
-
     for set in data_sets:
-        processing_visualization(set.file_dat, set.file_plot, set.analyse_flow, show=show)
+        processing_visualization(set.file_dat, set.file_plot, set.analyse_flow,
+                                    show=show)
 
 
 def main():
@@ -76,9 +77,11 @@ def main():
     stop        = int(os.sys.argv[3])
     sample_step = int(os.sys.argv[4])
 
+    plt_range = np.arange(start, stop, sample_step)
+
     method = 'inter_mean'
     order = 'sep'
-    data_sets = [data(set_keyword, i, method, order) for i in np.arange( int(os.sys.argv[2]),int(os.sys.argv[3]), sample_step )]
+    data_sets = [data(set_keyword, i, method, order) for i in plt_range]
 
     plot_samples(data_sets, False)
 

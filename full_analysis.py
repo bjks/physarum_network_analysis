@@ -2,6 +2,7 @@ import os
 import time
 import subprocess
 from analysis.data_sets import *
+import datetime
 
 
 ############################################
@@ -20,6 +21,8 @@ def sub_command(com):
     print(com)
     if sys.platform.startswith('linux'):
         os.system(com)
+    else:
+        print("Dryrun!")
 
 
 def command_ratiometric(a, b):
@@ -93,6 +96,7 @@ def run_read():
                   ',START=' + str(first) + \
                   ',STOP=' + str(last) + \
                   ',STEP='  + str(50) + to_qsub +  'qsub_read_rat.sh'
+    sub_command(com)
 
 ############################################
 def run_phase():
@@ -103,17 +107,21 @@ def run_phase():
 
 ###################################################
 def check_and_wait(sec, script):
-    while True:
-        print("Checking qstat...")
+    while True and sys.platform.startswith('linux'):
+        # print("Checking qstat...")
         qstat = subprocess.check_output("qstat", universal_newlines=True)
-        print(len(qstat))
+        # print(len(qstat))
         if script not in qstat:
             break
         time.sleep(sec)
 
 ####################################################################
 ####################################################################
+
+
 check_and_wait(100, 'czi_')
+
+print("Start analysis of ", NAME, " at ", datetime.datetime.now())
 run_ratiometric()
 
 
@@ -128,3 +136,5 @@ run_animation('raw')
 
 check_and_wait(100, 'skelet')
 run_phase()
+
+print("Phase analysis of ", NAME, " submitted at ", datetime.datetime.now())
