@@ -30,13 +30,14 @@ def thick_skeleton(skeleton, times = 10):
 
     if times > 0:
         selem = morph.disk(times)
-        thick_skeleton = morph.dilation(skeleton.astype(int), selem)
+        thick_skeleton = morph.dilation(skeleton.astype(float), selem)
 
     else:
-        thick_skeleton = skeleton.copy().astype(int)
+        thick_skeleton = skeleton.copy().astype(float)
 
     thick_skeleton = np.ma.masked_where(thick_skeleton == 0, thick_skeleton)
     return thick_skeleton
+    
 
 def show_im(image, skel=False):
     plt.close()

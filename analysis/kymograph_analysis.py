@@ -5,6 +5,7 @@ import matplotlib as mpl
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
+
 from scipy.signal import hilbert
 from scipy import ndimage as ndi
 from scipy import stats
@@ -161,14 +162,14 @@ class kymograph:
     # ===================================================== #
     def shift(self, symm_setup, color):
         new = self.crop_kymo()
+
         if symm_setup:
             shifted = ndi.zoom(new.kymo, (1,2), order=5)[1:]
             new = new.copy_meta(shifted)
-            new.t_scaling = new.scaling/2.
+            new.t_scaling = new.t_scaling/2.
 
-        else:
-            new = self.crop_kymo()
-            new.color = color
+
+        new.color = color
         return new
 
 
@@ -209,32 +210,24 @@ class kymograph:
 
 def plot_kymograph(kymo_list, filename, lim_mode='minmax'):
 
-    # nx, nt = np.shape(kymo)[0], np.shape(kymo)[1]
-    #
-    # no_labels = 6 # how many labels to see on axis x
-    # step_t = int(nt / (no_labels - 1)) # step between consecutive labels
-    # t_positions = np.arange(0, nt, step_t) # pixel count at label position
-    #
-    # step_x = int(nx / (no_labels - 1)) # step between consecutive labels
-    # x_positions = np.arange(0, nx, step_x)
-    # ax.set_xticks(t_positions, np.around(t_positions*frame_int, decimals=0))
-    # plt.yticks(x_positions,  x_positions )
-
     for kymo in kymo_list:
+
         fig, ax = plt.subplots()
-        if lim_mode != 'minmax':
+
+        extent =    [0, kymo.kymo.shape[1]*kymo.t_scaling,
+                     0, kymo.kymo.shape[0]]
+
+        if lim_mode == 'std':
             std_im, mean_im = np.nanstd(kymo.kymo), np.nanmean(kymo.kymo)
             min, max = mean_im - lim_mode*std_im, mean_im + lim_mode*std_im
 
-            im = ax.imshow(kymo.kymo, cmap=kymo.cmap, aspect='auto',
+            im = ax.imshow(kymo.kymo, cmap=kymo.cmap, extent=extent,
+                            origin='lower', aspect='auto',
                             vmin = min, vmax = max)
         else:
-            im = ax.imshow(kymo.kymo, cmap=kymo.cmap, aspect='auto')
+            im = ax.imshow(kymo.kymo, cmap=kymo.cmap, extent=extent,
+                            origin='lower', aspect='auto')
 
-        ax.set_xlim(left=0, right=np.shape(kymo.kymo)[1])
-        locs = ax.get_xticks()
-        ax.set_xticks(locs)
-        ax.set_xticklabels(np.around(locs * kymo.t_scaling, decimals=0).astype(int))
 
         ax.set_title(kymo.get_title(0))
         ax.set_ylabel('space (pixel)')
@@ -265,15 +258,20 @@ def slid_aver2d(arr2d, window_size, axis=0):
     return np.apply_along_axis(slid_aver, axis, arr2d, *(window_size,))
 
 
-def plot_time_series(kymos, filename=None, window_size=10):
+def find_nearest(array, value):
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return array[idx]
 
-    fig, axes = plt.subplots(len(kymos),1, sharex=False)
-    frame_int = kymos[0].t_scaling
 
-    for ax, kymo in zip(axes, kymos):
+def plot_time_series(kymos, path, filename=None, window_size=10, min_dist_s=70):
+    no_kymos = len(kymos)
+
+    for i, kymo in zip(np.arange(no_kymos), kymos):
+        ax = plt.subplot2grid((no_kymos, 3), (i,0), rowspan=1, colspan=2)
 
         time_series = slid_aver2d(kymo.kymo, window_size)[::window_size]
-        timestamps = np.arange(np.shape(time_series)[1]) * frame_int
+        timestamps = np.arange(np.shape(time_series)[1]) *  kymos[0].t_scaling
 
 
         pixel_positions = np.arange(0, np.shape(time_series)[0] ) * window_size
@@ -285,18 +283,39 @@ def plot_time_series(kymos, filename=None, window_size=10):
         cmap.set_array([])
 
         for t_s, p in zip(time_series, pixel_positions):
+            peak_inds, _ = signal.find_peaks(t_s, width=5, distance=int(min_dist_s/ kymos[0].t_scaling))
+
             im = ax.plot(timestamps, t_s, c=cmap.to_rgba(p))
+            # ax.plot(timestamps[peak_inds], t_s[peak_inds],"x", c=cmap.to_rgba(p))
 
         ax.set_xlim(0, timestamps[-1])
-        ax.set_title(kymo.get_title(0))
+        ax.set_ylabel(kymo.name)
+        ax.grid(True, axis='x')
 
-        if not ax == axes[-1]:
-            ax.set_xticks([])
+        if not i==no_kymos-1:
+            ax.set_xticklabels([])
+        else:
+            ax.set_xlabel('time (s)')
 
 
+
+    ax = plt.subplot2grid((no_kymos, 3), (0,2), rowspan=no_kymos, colspan=1)
+
+    no_coords = path.shape[0]
+
+    ax.scatter(path[:,1], path[:,0], c=range(no_coords), vmin=0, vmax=no_coords,
+                cmap='plasma')
+
+    ax.axis('equal')
+    ax.invert_yaxis()
+    ax.axis('off')
+
+    plt.subplots_adjust(hspace=0.5)
     plt.savefig(filename + 'time_series.pdf', dpi=400, bbox_inches='tight')
     plt.close()
     # plt.show()
+
+
 
 
 # ===================================================== #
@@ -324,7 +343,8 @@ def dominant_freq(kymo, min_freq=0.05, max_period=None):
 def power_spec(kymo, filename,
                 min_freq=0.005, max_freq=0.05,          #periods between 200 and 20s
                 min_period=None, max_period=None,
-                mark_freq=None, logscale=False):
+                mark_freq=None, band=None,
+                logscale=False):
 
 
     if min_period!=None and max_period!=None:
@@ -376,12 +396,19 @@ def power_spec(kymo, filename,
     # ax[1].set_xticks(f1[peaks])
     # ax[1].set_yticks([])
     if mark_freq != None:
-        mark_freq *= 1e3
-        ax[1].axvline(x=mark_freq, linewidth=1, color='red',
+        ax[1].axvline(x=mark_freq*1e3, linewidth=1, color='red',
             label='dominant frequency: ' +
-            str(np.around(mark_freq, decimals=2)) + ' mHz')
+            str(np.around(mark_freq*1e3, decimals=2)) + ' mHz')
 
         ax[1].legend()
+
+    if band != None:
+        ax[1].axvspan(np.min(band)*1e3, np.max(band)*1e3, facecolor='0.2',
+                        alpha=0.3, label='frequency band')
+
+        ax[1].legend()
+
+
 
     ax[1].xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ax[1].set_xlabel('frequency (mHz)')
@@ -528,8 +555,8 @@ def gauss_detrend(kymo, r):
 
 
 
-def correlate_phase(kymo_a, kymo_b, filename, title, upsample_t=1, upsample_x=1,
-                    search_range_in_s=50, detrend=None):
+def correlation_shift(kymo_a, kymo_b, filename, title, upsample_t=1, upsample_x=1,
+                    search_range_in_s=50, x_search=50, detrend=None):
 
 
     kymo1 = kymo_a.copy()
@@ -545,59 +572,40 @@ def correlate_phase(kymo_a, kymo_b, filename, title, upsample_t=1, upsample_x=1,
     kymo1.kymo = ndi.zoom(kymo1.kymo, (upsample_x,upsample_t), order=5)
     kymo2.kymo = ndi.zoom(kymo2.kymo, (upsample_x,upsample_t), order=5)
 
-    image_product   = np.fft.fft2(kymo1.kymo) * np.fft.fft2(kymo2.kymo).conj()
-    cc_image        = np.fft.ifft2(image_product)
 
-    unshifted_correlation       = cc_image.real
-    time_shifted_correlation    = np.fft.fftshift(unshifted_correlation, axes=1)
-    correlation                 = np.fft.fftshift(unshifted_correlation)
+    t_lims = int(search_range_in_s/(2*kymo1.t_scaling)) * upsample_t
+    x_lims = np.min([upsample_x * x_search, int(kymo1.kymo.shape[0]/4.)])
 
-    nx, nt = np.shape(correlation)[0], np.shape(correlation)[1]
+    print(x_lims)
+    print(kymo1.kymo.shape)
+    print(kymo1.kymo[x_lims:-x_lims,t_lims:-t_lims].shape)
+    print(kymo2.kymo.shape)
 
+    corr2d = match_template(kymo2.kymo,
+                            kymo1.kymo[x_lims:-x_lims,t_lims:-t_lims])
 
-    ####### Calc MIN #########
-    low_b   = int(nt/2 - search_range_in_s/kymo1.t_scaling * upsample_t)
-    up_b    = int(nt/2 + search_range_in_s/kymo1.t_scaling * upsample_t)
-    min = np.argmin(time_shifted_correlation[0][low_b:up_b]) + low_b
+    corr1d = corr2d[x_lims]
 
-    timestamps = (np.arange(nt) - int(nt/2)) * kymo1.t_scaling/upsample_t
-    min_in_s = timestamps[min]
+    ind = np.unravel_index(np.argmin(corr1d, axis=None), corr1d.shape)
+    min = ind[0] - int(corr1d.shape[0]/2)
 
-
-    #### 1D PLOT #####
-    correlation1d = time_shifted_correlation[0]
-
-    fig, ax = plt.subplots()
-
-    ax.plot(timestamps, correlation1d/np.max(correlation1d))
-    ax.plot(timestamps, kymo1.kymo[0], label='radius')
-    ax.plot(timestamps, kymo2.kymo[0], label='concentration')
-    ax.axvline(x=min_in_s, linewidth=1, color='r',
-                label='Min: ' + str(np.around(min_in_s, decimals=2)) + ' s')
-
-    ax.set_ylabel('space lag (pixel)')
-    ax.set_xlabel('time lag (s)')
-    ax.legend()
-    plt.savefig(filename + title + 'correlate1d.pdf', dpi=400)
-
-    plt.close()
+    min_in_s = min * kymo1.t_scaling / upsample_t
 
 
     #### IMSHOW PLOT ####
     fig, ax = plt.subplots()
 
-    im = ax.imshow(correlation, aspect='auto')
-    ax.axvline(x=min, linewidth=0.5, color='r',
+    ext_t = t_lims * kymo1.t_scaling/ upsample_t
+    im = ax.imshow(corr2d, aspect='auto',
+                    extent=[-ext_t, ext_t, -x_lims, x_lims])
+
+    ax.axvline(x=min_in_s, linewidth=0.5, color='r',
                 label='Min: ' + str(np.around(min_in_s, decimals=1)) + ' s')
 
     ax.set_xlabel('time lag (s)')
     ax.set_ylabel('space lag (pixel)')
 
-    ax.set_xticks([int(nt/2)])
-    ax.set_xticklabels([0])
 
-    ax.set_yticks([int(nx/2)])
-    ax.set_yticklabels([0])
 
     ax.legend()
     divider = make_axes_locatable(ax)
@@ -606,46 +614,47 @@ def correlate_phase(kymo_a, kymo_b, filename, title, upsample_t=1, upsample_x=1,
 
     fig.tight_layout()
 
-    plt.savefig(filename + title + 'correlate2d.pdf', dpi=400)
+    plt.savefig(filename + title + 'correlate2d.pdf', dpi=400, bbox_inches='tight')
 
     plt.close()
 
-    return min * kymo1.t_scaling/ upsample_t
-
+    return min_in_s
 
 
 # ===================================================== #
-#  Time/space dependend phase_shift #
+#  Time/space dependend time shift #
 # ===================================================== #
-def phase_shift2d(kymo_a, kymo_b, filename, upsample=1, window_size=50,
-                        sampling=20, search_range_in_s=40):
-
-    """
-    upsample            upsample images to get subpixel precision
-    window_size         window for corr given by window_size * window_size
-    sampling            sampling step between pixels that serve as seeds for window
-    search_extend       extends search area by search_extend
-    """
+def time_shift2d(kymo_a, kymo_b, filename, upsample_t=1, window_size_in_s=200,
+                    t_sampling_in_s = 10, x_sampling=20, search_range_in_s=100,
+                    detrend=None):
 
     kymo1 = kymo_a.copy()
     kymo2 = kymo_b.copy()
 
-    search_extend = np.around(search_range_in_s/kymo1.t_scaling).astype(int)
+    if detrend=='gauss':
+        sec = 150
+        sigma_gauss = sec / kymo1.t_scaling
+        kymo1.kymo = gauss_detrend(kymo1.kymo, sigma_gauss)
+        kymo2.kymo = gauss_detrend(kymo2.kymo, sigma_gauss)
 
-    s_min = search_extend
-    s_max = -search_extend
+    window_size     = np.around(window_size_in_s/kymo1.t_scaling).astype(int)
+    search_extend   = np.around(search_range_in_s/(2. * kymo1.t_scaling)).astype(int)
+    t_sampling      = np.around(t_sampling_in_s/ kymo1.t_scaling ).astype(int)
+    x_sampling      = np.min([x_sampling, kymo1.kymo.shape[0]])
 
-    window  = (window_size + 2*search_extend * upsample,)*2 # calc window shape eg (40,40)
-    step    = sampling * upsample
+    s_min = search_extend * upsample_t
+    s_max = -search_extend * upsample_t
+
+    window  = (x_sampling, (window_size + 2*search_extend)*upsample_t )
+    step    = (x_sampling, int(t_sampling * upsample_t) )
 
 
-    if upsample > 1:
-        kymo1.kymo = ndi.zoom(kymo1.kymo, upsample, order=5)
-        kymo2.kymo = ndi.zoom(kymo2.kymo, upsample, order=5)
+    kymo1.kymo = ndi.zoom(kymo1.kymo, (1,upsample_t), order=5)
+    kymo2.kymo = ndi.zoom(kymo2.kymo, (1,upsample_t), order=5)
 
 
-    a_windows = view_as_windows(kymo1.kymo, window_shape= window, step=step)
-    b_windows = view_as_windows(kymo2.kymo, window_shape= window, step=step)
+    a_windows = view_as_windows(kymo1.kymo, window_shape=window, step=step)
+    b_windows = view_as_windows(kymo2.kymo, window_shape=window, step=step)
     shape = np.shape(b_windows)
 
     mins = np.zeros(shape[:2])
@@ -653,30 +662,77 @@ def phase_shift2d(kymo_a, kymo_b, filename, upsample=1, window_size=50,
     for i in range(shape[0]):
         for j in range(shape[1]):
             # crop window to orig. window_size
-            a = a_windows[i,j][s_min:s_max, s_min:s_max]
+            a = a_windows[i,j][:, s_min:s_max]
             b = b_windows[i,j]
 
-            show_im(a)
-            show_im(b)
-
-            corr2d = match_template(b,a)
-            show_im(corr2d)
-
-            corr1d = corr2d[int(corr2d.shape[0]/2)]
-
-            plt.plot(corr1d)
-            plt.show()
+            corr1d = match_template(b,a)[0]
 
             ind = np.unravel_index(np.argmin(corr1d, axis=None), corr1d.shape)
             mins[i,j] = ind[0] - int(corr1d.shape[0]/2)
+            # if np.abs(mins[i,j]) >= s_min-1:
+            # show_im(a)
+            # show_im(b)
+            #
+            # plt.plot(corr1d)
+            # plt.show()
+            # plt.close()
 
+
+    time_shift_map = mins * kymo1.t_scaling/ upsample_t
+
+    # plotting...
     fig, ax = plt.subplots()
-    ax.imshow(mins, aspect='auto')
-    plt.savefig(filename  + 'phase_shift_map.pdf', dpi=400)
 
-    return mins * kymo1.t_scaling/ upsample
+    ax.set_title('time shift (s)')
+
+    ax.set_ylabel('space (pixel)')
+    ax.set_xlabel('time (s)')
+
+    # limits
+    extent =    [0, kymo_a.kymo.shape[1]*kymo_a.t_scaling,
+                 0, kymo_a.kymo.shape[0]]
+
+    vminmax = np.max(np.abs([np.min(time_shift_map), np.max(time_shift_map)]))
 
 
+    # plot
+    im = ax.imshow(time_shift_map, extent=extent, origin='lower',
+                    aspect='auto', cmap='RdBu', vmin=-vminmax, vmax=vminmax)
+
+
+    # colorbar ticks
+    ticks = np.arange(-50, 50, 10)
+    labels = ticks.astype(str)
+
+    mean = np.mean(time_shift_map)
+    hide_id = np.argmin(np.abs(ticks - mean))
+    labels[hide_id] = ''
+
+    ticks = np.append(ticks, mean)
+
+    labels = np.append(labels, 'mean: ' + str(np.around(mean, decimals=1)))
+
+    # colorbar
+    divider = make_axes_locatable(ax)
+    cbar = fig.colorbar(im, cax = divider.append_axes('right', size='5%', pad=0.05),
+                 orientation='vertical', ticks=ticks)
+    cbar.ax.set_yticklabels(labels)
+
+
+    plt.savefig(filename  + 'time_shift_map.pdf', dpi=400, bbox_inches='tight')
+
+    plt.close()
+
+
+    return time_shift_map
+
+
+
+
+
+# ===================================================== #
+#  analyt. flow calc. #
+# ===================================================== #
 
 def estimate_flow(radii, frame_int):
     radii_b =  bandpass(radii, frame_int, max_freq=0.015)

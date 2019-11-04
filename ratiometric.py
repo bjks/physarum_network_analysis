@@ -111,9 +111,9 @@ def process_ratiometric(set):
 
 def main(): ## python3 ratiometric.py <keyword> <first> <last(+1)>
 
-    set_keyword = os.sys.argv[1]
-    start       = int(os.sys.argv[2])
-    stop        = int(os.sys.argv[3])
+    set_keyword = os.sys.argv[1].strip()
+    start       = int(os.sys.argv[2].strip())
+    stop        = int(os.sys.argv[3].strip())
     method      = 'inter_mean'
 
     data_sets = [data(set_keyword, i, method, color='sep') for i in range(start, stop)]

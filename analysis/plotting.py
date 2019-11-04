@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 from analysis.tools import *
 from analysis.network_analysis import *
 
@@ -16,6 +17,8 @@ def plot_image(file_dat, keyword, file_plot, show=False):
 
 
 def plot_branch(branch_map, label, path_name):
-    plt.imshow(thick_skeleton(branch_map))
+    dummy_cmap = colors.ListedColormap(['tab:orange', 'tab:blue'])
+
+    plt.imshow(-thick_skeleton(branch_map), cmap=dummy_cmap)
     plt.savefig(path_name + 'branch' + str(label) + '.pdf')
     plt.close()

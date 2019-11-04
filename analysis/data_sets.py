@@ -18,12 +18,6 @@ def mk_mising_dir(path_name):
 class data_paths:
     def __init__(self, image_prefix, no, zeros, texas, green, bf):
 
-        self.core1           = image_prefix + str(no).zfill(zeros)
-        if self.color == 'gt':
-            self.core2           = image_prefix + str(no+1).zfill(zeros)
-        else:
-            self.core2           = image_prefix + str(no).zfill(zeros)
-
         if self.subdir == None:
             dir = self.path
         else:
@@ -45,6 +39,11 @@ class data_paths:
             if self.subdir != None:
                 mk_mising_dir(d + self.path + '/' +self.subdir)
 
+        self.core1           = image_prefix + str(no).zfill(zeros)
+        if self.color == 'gt':
+            self.core2           = image_prefix + str(no+1).zfill(zeros)
+        else:
+            self.core2           = image_prefix + str(no).zfill(zeros)
 
         if bf != None:
             bf = [x.strip() for x in bf.split()]
@@ -124,19 +123,25 @@ class data(data_paths):
         # number of conncted areas that are interpreted as networks
         # '1' keeps only the largest area, None does not change the mask
         self.extract        = params.getint('extract', None)
-        self.branch_thresh  = params.getint('branch_thresh', 50)
+        self.branch_thresh  = params.getint('branch_thresh', 10)
 
 
         self.analyse_flow   = params.getboolean('analyse_flow', False)
         self.symm_setup     = params.getboolean('symm_setup', False)
 
 
-        # frame interval in seconds and scaling (pixel)
+        # frame interval in seconds and scaling (um(!) per pixel)
         self.frame_int      = params.getfloat('frame_int', 1.0)
         self.pixel_scaling  = params.getfloat('pixel_scaling', None)
 
         self.first          = params.getint('first', 1)
         self.last           = params.getint('last')
+
+        self.times = tuple(int(t) if t != 'None' else None
+                        for t in params.get('times', 'None None').split())
+
+        self.positions = tuple(int(t) if t != 'None' else None
+                        for t in params.get('positions', 'None None').split())
 
         # self.seed_positions = json.loads(params.get('seed_positions',
                                                     # '[[1000, 700]]'))
@@ -147,8 +152,8 @@ class data(data_paths):
 
         bf                  = params.get('bf', None)
 
-
         zeros               = params.getint('zeros', 3)
+
         super(data, self).__init__(image_prefix, no, zeros,
                                     texas, green,
                                     bf)

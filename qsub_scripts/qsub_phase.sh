@@ -6,7 +6,6 @@
 #$ -cwd
 #$ -q grotrian.q
 #$ -l h=!grotrian19
-#$ -q mvapich2-grotrian.q
 #$ -V
 #$ -o /data.bpm/bksche/std/std_phase_out
 #$ -e /data.bpm/bksche/std/std_phase_err

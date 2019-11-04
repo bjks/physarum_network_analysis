@@ -10,6 +10,7 @@ import datetime
 NAME        = os.sys.argv[1]
 NO_SLICES   = int(os.sys.argv[2])
 MAX_FRAME   = 200
+SKIP = True
 ############################################
 ############################################
 
@@ -117,15 +118,16 @@ def check_and_wait(sec, script):
 
 ####################################################################
 ####################################################################
-
-
-check_and_wait(100, 'czi_')
-
 print("Start analysis of ", NAME, " at ", datetime.datetime.now())
-run_ratiometric()
+
+if SKIP:
+    pass
+else:
+    check_and_wait(100, 'czi_')
+    run_ratiometric()
+    check_and_wait(100, 'ratiomet')
 
 
-check_and_wait(100, 'ratiomet')
 run_skeleton()
 run_snr()
 run_tube_profile()

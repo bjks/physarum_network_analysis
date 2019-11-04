@@ -120,8 +120,9 @@ def extract_branch(file_dat, seed_position, quantities):
     return values_in_branch, seed_position, skeleton, label
 
 
-def brach_datfile(set, label):
-    return set.file_dat_set + '_branch_' + str(label) + '.npz'
+def branch_datfile(set, label, ext=''):
+    return set.file_dat_set + '_branch_' + str(label) + ext
 
-def branch_plotpath(set,label):
+
+def branch_plotpath(set, label):
     return mk_mising_dir(set.file_plot_set + '_branch_' + str(label) + '/')

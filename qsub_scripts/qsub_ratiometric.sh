@@ -5,7 +5,6 @@
 #$ -N ratiometric
 #$ -cwd
 #$ -q grotrian.q
-#$ -q mvapich2-grotrian.q
 #$ -l h=!grotrian19
 #$ -V
 #$ -o /data.bpm/bksche/std/std_rat_out

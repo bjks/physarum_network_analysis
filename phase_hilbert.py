@@ -1,29 +1,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib as mpl
-
-from scipy.signal import hilbert
-from scipy import ndimage as ndi
-from scipy import stats
-from scipy.optimize import curve_fit
 
 import os
-import itertools
 
-from scipy import signal
-from matplotlib.ticker import FormatStrFormatter
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from scipy.signal import find_peaks
 
 from analysis.data_sets import *
 from analysis.tools import *
 from analysis.network_analysis import *
 from analysis.skeleton_analysis import *
 from analysis.kymograph_analysis import *
-
 from analysis.plotting import *
 
-
+import multiprocessing
+import itertools
 
 SHOW = False
 SAVE = False
@@ -34,44 +23,43 @@ plt.rcParams['font.sans-serif'] = ['Avenir',
                                     'Lucida Grande',
                                     'Verdana']
 
+def upd_out(d, *args, supr=False):
+    d.update(args)
+    if not supr:
+        print(*args)
 
 
-def main():
-    set_keyword     = os.sys.argv[1].strip()
-    color           = 'sep'
-    method          = 'inter_mean'
-
-    set             = data(set_keyword, no=data(set_keyword).first,
-                            method=method, color=color)
-
-
+def process_phase(set, label):
     align_keyword   = 'reference_point'
 
-    times           = None, None
-    positions       = None, None
+    times           = set.times
+    positions       = set.positions
 
     substract_ecto  = False
 
     max_period      = 140
-    range_freq      = 0.001, 0.003
+    range_freq      = 0.004, 0.006
     cmap_r          = 'viridis'
     cmap_c          = 'cividis'
 
+    data_file = branch_datfile(set, label, ext='.npz')
 
-
-    labels          = get_seeds_positions(set, range_only=True)
-
-    for label in labels:
-        kymos_data = np.load(brach_datfile(set, label))
+    if not os.path.isfile(data_file):
+        print("\nNOTE: ", data_file, " not found!\n")
+    else:
+        print("Analyze: ", data_file)
+        kymos_data = np.load(data_file)
         path_name = branch_plotpath(set, label)
 
         filename = path_name + '/branch_' + str(label) + '_'
 
-
+        to_save_dict = dict()
         ##################################################################
         ########################## Collect data ##########################
         ##################################################################
         print("Collect data...")
+
+        path0 = np.array(kymos_data['path'][0])
 
         radii           = kymograph.get_dat(kymos_data, 'kymo_local_radii',
                                             'radius',
@@ -200,10 +188,11 @@ def main():
 
 
         print("Plotting cropped...")
-
         plot_kymograph([radii, conce, inner, outer], filename)
 
-        plot_time_series([radii, conce], filename, window_size=50)
+
+        print("Plotting time_series...")
+        plot_time_series([radii, conce, inner, outer], path0, filename, window_size=50)
 
         ##################################################################
         #################### Fourier spectrum  ###########################
@@ -211,15 +200,32 @@ def main():
 
         freq_r = dominant_freq(radii, max_period=max_period)
         freq_c = dominant_freq(conce, max_period=max_period)
-        print('Dominant frequency(radius): ', freq_r)
-        print('Dominant frequency(conce): ', freq_c)
+
+        upd_out(to_save_dict, ('freq_r', freq_r), ('freq_c', freq_c) )
+
+
+
+        print("Time shift map...")
+        dummy_c = radii.copy()
+        dummy_c.kymo = -np.roll(dummy_c.kymo, 10 ,axis=1)
+
+        time_shift_map = time_shift2d(radii, conce, filename, upsample_t=10,
+                            window_size_in_s=2./freq_r, t_sampling_in_s=2/freq_r,
+                            x_sampling=100, search_range_in_s=1.1/freq_r,
+                            detrend='gauss')
+
+        upd_out(to_save_dict, ('time_shift_map', time_shift_map), supr=True)
+
 
         band_f1, band_f2 = freq_r-range_freq[0], freq_r+range_freq[1]
 
+        upd_out(to_save_dict, ('band_f1', band_f1), ('band_f2', band_f2) )
+
+
         power_spec(radii, filename, min_freq=0, max_freq=0.05,
-                     mark_freq = freq_r, logscale=True)
+                     mark_freq=freq_r, band=(band_f1,band_f2),logscale=True)
         power_spec(conce, filename, min_freq=0, max_freq=0.05,
-                     mark_freq = freq_c, logscale=True)
+                     mark_freq=freq_c, band=(band_f1,band_f2), logscale=True)
 
 
         #
@@ -248,64 +254,85 @@ def main():
              [k.bandpass(band_f1, band_f2) for k in [radii, conce, inner, outer]]
 
 
-        phase_shift_map = phase_shift2d(radii_b, conce_b, filename, upsample=2,
-                            window_size=100, sampling=100, search_range_in_s=100)
 
         plot_kymograph([radii_b, conce_b, inner_b, outer_b], filename)
 
 
-        phase_shift = phase_average(phase_radius,
+        phase_shift_c = phase_average(phase_radius,
                                     [radii_b, conce_b, inner_b, outer_b],
                                     filename, 'concentration')
+
+        upd_out(to_save_dict, ('phase_shift_c', phase_shift_c) )
+
 
         if set.analyse_flow:
             flow_x_b = flow_x.bandpass(band_f1, band_f2)
             flow_y_b = flow_y.bandpass(band_f1, band_f2)
 
-            plot_kymograph([flow_x, flow_y], filename)
+            plot_kymograph([flow_x_b, flow_y_b], filename)
 
-            phase_shift = phase_average(phase_radius, [radii_b, flow_x, flow_y],
+            phase_shift_f = phase_average(phase_radius, [radii_b, flow_x_b, flow_y_b],
                                         filename, 'flow')
+
+            upd_out(to_save_dict, ('phase_shift_f', phase_shift_f) )
+
 
         ##################################################################
         ######################### correlations ###########################
         ##################################################################
-        min_k = correlate_phase(radii, conce, filename, 'kymos',
-                                upsample_t=10, upsample_x=1,
+        corr_shift_c = correlation_shift(radii, conce, filename, 'kymos',
+                                upsample_t=2, upsample_x=1,
+                                search_range_in_s=1./freq_r,
                                 detrend='gauss')
 
+        upd_out(to_save_dict, ('corr_shift_c', corr_shift_c) )
 
-        show_im(phase_shift_map)
+
+
 
         if set.analyse_flow:
-            _ = correlate_phase(conce, flow_y, filename, 'flow-concentartion',
+            corr_shift_f = correlation_shift(conce, flow_y, filename,
+                                'flow-concentartion',
                                 upsample_t=10, upsample_x=1,
+                                search_range_in_s=1./freq_r,
                                 detrend='gauss')
+
+            upd_out(to_save_dict, ('corr_shift_f', corr_shift_f) )
 
 
         ##################################################################
         ######################### Save in txt ############################
         ##################################################################
-        if SAVE:
-            if not os.path.exists('time_shifts_data_sets'):
-                os.mkdir('time_shifts_data_sets')
 
-            data_sets_summary = 'time_shifts_data_sets/time_shift_' + color +'.txt'
-            if not os.path.isfile(data_sets_summary):
-                with open(data_sets_summary, "w") as out_var:
-                    out_var.write('# data_set \t label \t' +
-                                    'phase_radius \t phase_conc \t' +
-                                    'phase_inner \t phase_outer \t' +
-                                    'min_kymo + \n')
+        np.savez_compressed(branch_datfile(set, label, ext='_phase'), **to_save_dict)
 
-            with open(data_sets_summary, "a") as out_var:
-                out_var.write(set_keyword +
-                                '\t' + str(label) +
-                                '\t' + str(phase_shift[0]) +
-                                '\t' + str(phase_shift[1]) +
-                                '\t' + str(phase_shift[2]) +
-                                '\t' + str(phase_shift[3]) +
-                                '\t' + str(min_k) +'\n')
+
+
+
+
+def main():
+    set_keyword     = os.sys.argv[1].strip()
+
+    set             = data(set_keyword, method='inter_mean', color='sep')
+    labels          = get_seeds_positions(set, range_only=True)
+
+
+
+    num_threads = multiprocessing.cpu_count()
+    print("Number of detected cores: ", num_threads)
+
+    # labels = [4]
+
+    if len(os.sys.argv)>2:
+        for label in labels:
+            process_phase(set, label)
+
+    else:
+        p = multiprocessing.Pool(num_threads)
+        p.starmap(process_phase, zip(itertools.repeat(set), labels))
+
+        p.close()
+        p.join()
 
 
 if __name__ == '__main__':

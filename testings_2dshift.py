@@ -1,4 +1,3 @@
-from skimage.feature import canny
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,11 +12,8 @@ from phase_hilbert import *
 from multiprocessing.dummy import Pool as ThreadPool
 
 def main():
-    set_keyword = os.sys.argv[1]
-    data_sets = [data(set_keyword, i, method='inter_mean', color='tg') for i in range(data(set_keyword).first, data(set_keyword).last)]
-    print(data_sets[0].times)
-
-    ###############################
+    
+    plot_branch(bm, 0, 'name')
 
 if __name__ == '__main__':
     main()

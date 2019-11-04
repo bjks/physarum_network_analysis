@@ -66,7 +66,7 @@ def process_skeleton(data_sets, seed_position, label):
             alignment.append(int(len(path_coords)/2))
             reference_point = path_coords[int(len(path_coords)/2)]
             lenght0 = len(path_coords)
-            branch_map = skeleton + values[0]
+            branch_map = skeleton.astype(int) + np.where(values[0]>0, 1, 0)
 
         else:
             point_to_align = closest_point_in_skel(reference_point, values[0])
@@ -77,12 +77,11 @@ def process_skeleton(data_sets, seed_position, label):
     ### save everything
     to_save_dict = {n:k for n,k in zip(kymo_names, kymos)}
 
-    np.savez_compressed(set.file_dat_set + '_branch_' + str(label),
+    np.savez_compressed(branch_datfile(set, label),
                         branch_map          = branch_map,
                         path                = path,
                         alignment           = alignment,
                         **to_save_dict)
-    dat = np.load(set.file_dat_set + '_branch_' + str(label)+'.npz')
 
 
     ### plotting

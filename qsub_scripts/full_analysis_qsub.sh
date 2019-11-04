@@ -4,7 +4,6 @@
 #$ -S /bin/bash
 #$ -N rat_full
 #$ -cwd
-#$ -q mvapich2-grotrian.q
 #$ -q grotrian.q
 #$ -l h=!grotrian19
 #$ -V

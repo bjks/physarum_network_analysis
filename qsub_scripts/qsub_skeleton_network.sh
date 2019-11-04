@@ -4,7 +4,7 @@
 #$ -S /bin/bash
 #$ -N skeleton_net
 #$ -cwd
-#$ -q mvapich2-grotrian.q
+#$ -q grotrian.q
 #$ -l h=!grotrian19
 #$ -V
 #$ -o /data.bpm/bksche/std/std_skel_n_out
