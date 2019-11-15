@@ -122,7 +122,7 @@ class data(data_paths):
 
         # number of conncted areas that are interpreted as networks
         # '1' keeps only the largest area, None does not change the mask
-        self.extract        = params.getint('extract', None)
+        self.extract        = params.getint('extract', 1)
         self.branch_thresh  = params.getint('branch_thresh', 10)
 
 
@@ -143,8 +143,6 @@ class data(data_paths):
         self.positions = tuple(int(t) if t != 'None' else None
                         for t in params.get('positions', 'None None').split())
 
-        # self.seed_positions = json.loads(params.get('seed_positions',
-                                                    # '[[1000, 700]]'))
 
         image_prefix        = params.get('image_prefix')
         texas               = params.get('texas', '')

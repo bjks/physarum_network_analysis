@@ -9,4 +9,4 @@
 #$ -V
 #$ -o /data.bpm/bksche/std/std_full_out
 #$ -e /data.bpm/bksche/std/std_full_err
-python3 /data.bpm/bksche/network_analysis/full_analysis.py ${NAME} 50
+python3 /data.bpm/bksche/network_analysis/full_analysis.py ${NAME} 20

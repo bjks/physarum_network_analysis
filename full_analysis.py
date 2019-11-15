@@ -10,7 +10,7 @@ import datetime
 NAME        = os.sys.argv[1]
 NO_SLICES   = int(os.sys.argv[2])
 MAX_FRAME   = 200
-SKIP = True
+SKIP        = False
 ############################################
 ############################################
 

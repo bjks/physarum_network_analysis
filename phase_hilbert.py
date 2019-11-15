@@ -38,7 +38,9 @@ def process_phase(set, label):
     substract_ecto  = False
 
     max_period      = 140
-    range_freq      = 0.004, 0.006
+    min_frequency   = 1./max_period
+
+    bandwidth      = 0.002, 0.002
     cmap_r          = 'viridis'
     cmap_c          = 'cividis'
 
@@ -186,7 +188,6 @@ def process_phase(set, label):
             flow_y.color = 'darkgreen'
 
 
-
         print("Plotting cropped...")
         plot_kymograph([radii, conce, inner, outer], filename)
 
@@ -197,73 +198,72 @@ def process_phase(set, label):
         ##################################################################
         #################### Fourier spectrum  ###########################
         ##################################################################
-
-        freq_r = dominant_freq(radii, max_period=max_period)
-        freq_c = dominant_freq(conce, max_period=max_period)
-
+        freq_r = dominant_freq(radii, lowcut=min_frequency)
+        freq_c = dominant_freq(conce, lowcut=min_frequency)
         upd_out(to_save_dict, ('freq_r', freq_r), ('freq_c', freq_c) )
+
+        band_f1, band_f2 = freq_r-bandwidth[0], freq_r+bandwidth[1]
+        upd_out(to_save_dict, ('band_f1', band_f1), ('band_f2', band_f2) )
+
+
+
+        radii = radii.detrend(200, sig=20)
+        conce = conce.detrend(200, sig=20)
+        inner = inner.detrend(200, sig=20)
+        outer = outer.detrend(200, sig=20)
+
+        radii, conce, inner, outer = \
+            [k.detrend(200, sig=20, method = 'gauss') for k in [radii, conce, inner, outer]]
 
 
 
         print("Time shift map...")
-        dummy_c = radii.copy()
-        dummy_c.kymo = -np.roll(dummy_c.kymo, 10 ,axis=1)
-
         time_shift_map = time_shift2d(radii, conce, filename, upsample_t=10,
                             window_size_in_s=2./freq_r, t_sampling_in_s=2/freq_r,
-                            x_sampling=100, search_range_in_s=1.1/freq_r,
-                            detrend='gauss')
-
+                            x_sampling=100, search_range_in_s=1./freq_r,
+                            detrend=None)
         upd_out(to_save_dict, ('time_shift_map', time_shift_map), supr=True)
 
 
-        band_f1, band_f2 = freq_r-range_freq[0], freq_r+range_freq[1]
-
-        upd_out(to_save_dict, ('band_f1', band_f1), ('band_f2', band_f2) )
-
-
-        power_spec(radii, filename, min_freq=0, max_freq=0.05,
+        power_spec(radii, filename, lowcut=0, highcut=0.05,
                      mark_freq=freq_r, band=(band_f1,band_f2),logscale=True)
-        power_spec(conce, filename, min_freq=0, max_freq=0.05,
+        power_spec(conce, filename, lowcut=0, highcut=0.05,
                      mark_freq=freq_c, band=(band_f1,band_f2), logscale=True)
 
-
-        #
-        # ####################################################
-        # ########### substract  Ca_global(R) ################
-        # ####################################################
-        # if substract_ecto:
-        #     conce = substract_ecto_contribution(radii, conce, set.frame_int)
-        #     inner = substract_ecto_contribution(radii, inner, set.frame_int)
-        #     outer = substract_ecto_contribution(radii, outer, set.frame_int)
-        #
 
         ##################################################################
         ################# calc phase of oscillation ######################
         ##################################################################
+        print('Phase...')
+        phase_radius, amp_radius, freq_radius, car_radius = radii.kymo_hilbert()
+        phase_conce,  amp_conce, freq_conce, car_conce = conce.kymo_hilbert()
 
-        phase_radius, _, _ = extract_phase(radii, filename, band_f1, band_f2)
-        phase_conce, _, _  = extract_phase(conce, filename, band_f1, band_f2)
-
+        phase_shift_map = phase_shift2d(phase_radius, phase_conce, filename)
+        plot_kymograph_series([radii, phase_radius, amp_radius, car_radius], filename,
+                                ['minmax','minmax', 'minmax', 'minmax'])
+        plot_kymograph_series([conce, phase_conce, amp_conce, car_conce], filename,
+                                ['minmax', 'minmax', 'minmax', 'minmax'])
+        plot_kymograph_series([radii, conce], filename)
 
         ##################################################################
         ############ bandpass kymograph before binning ##################
         ######################## Phase dependence ########################
         ##################################################################
-        radii_b, conce_b, inner_b, outer_b = \
-             [k.bandpass(band_f1, band_f2) for k in [radii, conce, inner, outer]]
+
+        plot_kymograph([radii, conce, inner, outer], filename)
 
 
-
-        plot_kymograph([radii_b, conce_b, inner_b, outer_b], filename)
-
-
-        phase_shift_c = phase_average(phase_radius,
-                                    [radii_b, conce_b, inner_b, outer_b],
+        phase_shift_c = phase_average(phase_radius.kymo,
+                                    [radii, conce, inner, outer],
                                     filename, 'concentration')
 
         upd_out(to_save_dict, ('phase_shift_c', phase_shift_c) )
 
+        time_shift_map = time_shift2d(car_radius, car_conce, filename,
+                            upsample_t=10,
+                            window_size_in_s=2./freq_r, t_sampling_in_s=2/freq_r,
+                            x_sampling=100, search_range_in_s=1./freq_r,
+                            detrend=None)
 
         if set.analyse_flow:
             flow_x_b = flow_x.bandpass(band_f1, band_f2)
@@ -271,7 +271,7 @@ def process_phase(set, label):
 
             plot_kymograph([flow_x_b, flow_y_b], filename)
 
-            phase_shift_f = phase_average(phase_radius, [radii_b, flow_x_b, flow_y_b],
+            phase_shift_f = phase_average(phase_radius.kymo, [radii, flow_x_b, flow_y_b],
                                         filename, 'flow')
 
             upd_out(to_save_dict, ('phase_shift_f', phase_shift_f) )
@@ -313,21 +313,18 @@ def process_phase(set, label):
 def main():
     set_keyword     = os.sys.argv[1].strip()
 
-    set             = data(set_keyword, method='inter_mean', color='sep')
-    labels          = get_seeds_positions(set, range_only=True)
+    set             = data(set_keyword, no=data(set_keyword).first, method='inter_mean', color='sep')
 
-
-
-    num_threads = multiprocessing.cpu_count()
-    print("Number of detected cores: ", num_threads)
-
-    # labels = [4]
 
     if len(os.sys.argv)>2:
-        for label in labels:
-            process_phase(set, label)
+        label =  int(os.sys.argv[2])
+        process_phase(set, label)
 
     else:
+        num_threads = multiprocessing.cpu_count()
+        print("Number of detected cores: ", num_threads)
+
+        labels          = get_seeds_positions(set, range_only=True)
         p = multiprocessing.Pool(num_threads)
         p.starmap(process_phase, zip(itertools.repeat(set), labels))
 

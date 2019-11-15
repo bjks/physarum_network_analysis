@@ -1,50 +1,43 @@
-
+from __future__ import division
 import numpy as np
-import matplotlib.pyplot as plt
-from analysis.network_analysis import *
-from analysis.skeleton_analysis import *
-from analysis.data_sets import *
-from timeit import default_timer as timer
-import os
-from scipy.ndimage.filters import generic_filter
-from phase_hilbert import *
+from scipy import integrate, interpolate
+from scipy.signal import butter, lfilter, spectrogram
 
-from multiprocessing.dummy import Pool as ThreadPool
+slack_l, slack = 0.1, 1
+cutoff = 50
+L = 25
 
-import matplotlib.pyplot as plt
-import numpy as np
-from matplotlib import cm
-from numpy.random import randn
+from scipy.io import wavfile
+x = 
+sr, x = wavfile.read('capriccio.wav')
+x = x[:(L + slack) * sr, 0]
+x = x
 
-from skimage.feature import match_template
+# sr = 44100
+# x = np.random.normal(size=((L + slack) * sr,))
 
+b, a = butter(2, 2 * cutoff / sr, btype='low')  # Butterworth
 
-def main():
+# cutoff function
+def f(t):
+    return (10000 - 1000 * np.clip(t, 0, 9) - 1000 * np.clip(t-19, 0, 0.8)) \
+            / cutoff
 
-    fig, ax = plt.subplots()
+# and its reciprocal
+def fr(_, t):
+    return cutoff / (10000 - 1000 * t.clip(0, 9) - 1000 * (t-19).clip(0, 0.8))
 
-    data = np.clip(randn(250, 250), -5, 1)
-
-
-    corr = match_template(data, data[10:-10, 20:-20])
-    cax = ax.imshow(corr, interpolation='nearest', cmap=cm.coolwarm, aspect='auto')
-
-
-    ax.axvline(x=0.2, linewidth=0.5, color='r',)
-
-    # Add colorbar, make sure to specify tick locations to match desired ticklabels
-    ticks = np.append( np.arange(-5, 5, 0.5), np.mean(data)  )
-    labels = ticks.astype(str)
-    labels[-1]='    mean'
-    cbar = fig.colorbar(cax, ticks=ticks)
-    cbar.ax.set_yticklabels(labels)  # vertically oriented colorbar
-
-
-    plt.show()
-
-    plt.plot(corr[10])
-    plt.show()
-
-
-if __name__ == '__main__':
-    main()
+# modulate time
+# calculate upper end of td first
+tdmax = integrate.quad(f, 0, L + slack_l, points=[9, 19, 19.8])[0]
+span = (0, tdmax)
+t = np.arange(x.size) / sr
+tdinfo = integrate.solve_ivp(fr, span, np.zeros((1,)),
+                             t_eval=np.arange(0, span[-1], 1 / sr),
+                             vectorized=True)
+td = tdinfo.y.ravel()
+# modulate signal
+xd = interpolate.interp1d(t, x)(td)
+# and linearly filter
+yd = lfilter(b, a, xd)
+# modulate signal back to linear time
