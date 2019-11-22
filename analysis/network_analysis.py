@@ -37,7 +37,7 @@ def thick_skeleton(skeleton, times = 10):
 
     thick_skeleton = np.ma.masked_where(thick_skeleton == 0, thick_skeleton)
     return thick_skeleton
-    
+
 
 def show_im(image, skel=False):
     plt.close()
@@ -227,6 +227,9 @@ def disk_filter(dye, mask, r):
 
 
 def remove_spots(dye, mask, spots_sig, thresh_spots):
+    if spots_sig==None or thresh_spots==None:
+        return None, dye
+
     #### calculate background ####
     background   = disk_filter(dye, mask, spots_sig)
 

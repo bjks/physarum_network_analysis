@@ -20,9 +20,6 @@ def processing_visualization(file_dat, file_plot, analyse_flow,show=False):
     texas           = data['texas_clean']
     texas = np.ma.masked_where(texas == 0, texas)
 
-
-
-
     radius = np.ma.masked_where(data['radii_map'] == 0, data['radii_map'])
     ax[0].imshow(radius)
     ax[0].set_title('mapped radius')
@@ -80,8 +77,8 @@ def main():
     plt_range = np.arange(start, stop, sample_step)
 
     method = 'inter_mean'
-    order = 'sep'
-    data_sets = [data(set_keyword, i, method, order) for i in plt_range]
+    color = 'sep'
+    data_sets = [data(set_keyword, i, method, color) for i in plt_range]
 
     plot_samples(data_sets, False)
 

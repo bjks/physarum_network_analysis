@@ -1,9 +1,8 @@
 find . -type f -name "*_tg*" -delete
 
 
-rsync -rav -e ssh --include '*/' --exclude='*_t*' bksche@10.216.100.46:/data.bpm/bksche/results ~/image_analysis/
-rsync -rav -e ssh  --exclude='*' --include '*/' --include '*001_inter_mean*' bksche@10.216.100.46:/data.bpm/bksche/results ~/image_analysis/
-
+rsync -rav -e ssh --include '*/' --exclude='*_t*' bksche@10.216.1.1:/data.bpm/bksche/results ~/image_analysis/
+rsync -rav -e ssh  --exclude='*' --include '*/' --include '*001_inter_mean*' bksche@10.216.1.1:/data.bpm/bksche/results ~/image_analysis/
 
 ------ KYMOS ------
 rsync -azP --dry-run bksche@10.216.1.1:/data.bpm/bksche/results --include '*/' --include 'set*' --exclude '*' Documents/image_analysis/

@@ -114,8 +114,8 @@ class data(data_paths):
         self.halo_sig       = params.getfloat('halo_sig', None)
 
         # radius that is used in disk_filter and threshold to remove spots
-        self.spots_radius   = params.getfloat('spots_radius', 10)
-        self.thresh_spots   = params.getfloat('thresh_spots', 5.)
+        self.spots_radius   = params.getfloat('spots_radius', None)
+        self.thresh_spots   = params.getfloat('thresh_spots', None)
 
 
         self.lower_thresh   = params.getfloat('lower_thresh', None)

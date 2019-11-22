@@ -40,7 +40,7 @@ def process_phase(set, label):
     max_period      = 140
     min_frequency   = 1./max_period
 
-    bandwidth      = 0.002, 0.002
+    bandwidth      = np.array([-0.002, 0.002])
     cmap_r          = 'viridis'
     cmap_c          = 'cividis'
 
@@ -164,7 +164,6 @@ def process_phase(set, label):
         ##################################################################
         radii = radii.shift(set.symm_setup, 'orange')
 
-
         conce = kymograph.ca_concentration(kymo_c_green, kymo_c_texas,
                                             set.symm_setup,
                                             'concentration', cmap_c, 'blue')
@@ -176,7 +175,6 @@ def process_phase(set, label):
         outer = kymograph.ca_concentration(kymo_outer_green, kymo_outer_texas,
                                             set.symm_setup,
                                             'outer', cmap_c, 'darkblue')
-
 
 
 
@@ -198,24 +196,30 @@ def process_phase(set, label):
         ##################################################################
         #################### Fourier spectrum  ###########################
         ##################################################################
-        freq_r = dominant_freq(radii, lowcut=min_frequency)
-        freq_c = dominant_freq(conce, lowcut=min_frequency)
+
+        freq_r = power_spec(radii, filename, min_frequency, lowcut=0,
+                            highcut=0.05, band=bandwidth,logscale=True)
+        freq_c = power_spec(conce, filename, min_frequency, lowcut=0,
+                            highcut=0.05, band=bandwidth,logscale=True)
         upd_out(to_save_dict, ('freq_r', freq_r), ('freq_c', freq_c) )
 
-        band_f1, band_f2 = freq_r-bandwidth[0], freq_r+bandwidth[1]
+
+        band_f1, band_f2 = freq_r + bandwidth
         upd_out(to_save_dict, ('band_f1', band_f1), ('band_f2', band_f2) )
 
+        dom_freq_in_t = spectro(radii, filename, logscale=True, window_size_in_s=300, overlap=2)
 
+        # radii_adapt = radii.adaptive_bandpass(dom_freq_in_t, bandwidth)
+        # plot_kymograph([radii_adapt], filename)
 
-        radii = radii.detrend(200, sig=20)
-        conce = conce.detrend(200, sig=20)
-        inner = inner.detrend(200, sig=20)
-        outer = outer.detrend(200, sig=20)
-
+        print('Detrending...')
         radii, conce, inner, outer = \
-            [k.detrend(200, sig=20, method = 'gauss') for k in [radii, conce, inner, outer]]
+            [k.detrend(200, tsig2=20, psig1=1, psig2=5,
+            method = 'gauss') for k in [radii, conce, inner, outer]]
 
+        plot_kymograph_series([radii, conce], filename)
 
+        plot_kymograph([radii, conce, inner, outer], filename)
 
         print("Time shift map...")
         time_shift_map = time_shift2d(radii, conce, filename, upsample_t=10,
@@ -224,11 +228,6 @@ def process_phase(set, label):
                             detrend=None)
         upd_out(to_save_dict, ('time_shift_map', time_shift_map), supr=True)
 
-
-        power_spec(radii, filename, lowcut=0, highcut=0.05,
-                     mark_freq=freq_r, band=(band_f1,band_f2),logscale=True)
-        power_spec(conce, filename, lowcut=0, highcut=0.05,
-                     mark_freq=freq_c, band=(band_f1,band_f2), logscale=True)
 
 
         ##################################################################
@@ -239,19 +238,17 @@ def process_phase(set, label):
         phase_conce,  amp_conce, freq_conce, car_conce = conce.kymo_hilbert()
 
         phase_shift_map = phase_shift2d(phase_radius, phase_conce, filename)
+
+
         plot_kymograph_series([radii, phase_radius, amp_radius, car_radius], filename,
                                 ['minmax','minmax', 'minmax', 'minmax'])
         plot_kymograph_series([conce, phase_conce, amp_conce, car_conce], filename,
                                 ['minmax', 'minmax', 'minmax', 'minmax'])
-        plot_kymograph_series([radii, conce], filename)
 
         ##################################################################
         ############ bandpass kymograph before binning ##################
         ######################## Phase dependence ########################
         ##################################################################
-
-        plot_kymograph([radii, conce, inner, outer], filename)
-
 
         phase_shift_c = phase_average(phase_radius.kymo,
                                     [radii, conce, inner, outer],
@@ -259,11 +256,6 @@ def process_phase(set, label):
 
         upd_out(to_save_dict, ('phase_shift_c', phase_shift_c) )
 
-        time_shift_map = time_shift2d(car_radius, car_conce, filename,
-                            upsample_t=10,
-                            window_size_in_s=2./freq_r, t_sampling_in_s=2/freq_r,
-                            x_sampling=100, search_range_in_s=1./freq_r,
-                            detrend=None)
 
         if set.analyse_flow:
             flow_x_b = flow_x.bandpass(band_f1, band_f2)
@@ -313,7 +305,8 @@ def process_phase(set, label):
 def main():
     set_keyword     = os.sys.argv[1].strip()
 
-    set             = data(set_keyword, no=data(set_keyword).first, method='inter_mean', color='sep')
+    set             = data(set_keyword, no=data(set_keyword).first,
+                            method='inter_mean', color='sep')
 
 
     if len(os.sys.argv)>2:

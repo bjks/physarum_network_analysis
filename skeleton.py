@@ -103,7 +103,10 @@ def main(): ## python3 skeleton.py NAME
 
     set_keyword = os.sys.argv[1].strip()
     # label       = int(os.sys.argv[2])
-    color       = 'sep'
+    if len(os.sys.argv) > 2:
+        color = os.sys.argv[2].strip()
+    else:
+        color       = 'sep'
 
     data_sets = [data(set_keyword, i, method, color=color) for i in range(data(set_keyword).first, data(set_keyword).last)]
     seed_positions, labels = get_seeds_positions(data_sets[0])

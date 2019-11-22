@@ -4,12 +4,11 @@ import subprocess
 from analysis.data_sets import *
 import datetime
 
-
 ############################################
 ############################################
-NAME        = os.sys.argv[1]
-NO_SLICES   = int(os.sys.argv[2])
-COLOR       = 'sep'
+NAME        = os.sys.argv[1].strip()
+COLOR       = os.sys.argv[2].strip()
+NO_SLICES   = int(os.sys.argv[3])
 MAX_FRAME   = 200
 SKIP        = False
 IGNORE_CONV = True      # ignore running czi converters
@@ -28,16 +27,16 @@ def sub_command(com):
         print("Dryrun!")
 
 
-def command_ratiometric(a, b):
-    return 'qsub -v NAME=' + NAME + ',START=' + str(a) + ',END=' + str(b) \
-            + to_qsub + 'qsub_ratiometric.sh'
+def command_network(a, b):
+    return 'qsub -v NAME=' + NAME + ',COL=' + COLOR + ',START=' + str(a) \
+            + ',END=' + str(b) + to_qsub + 'qsub_network.sh'
 
-def run_ratiometric():
+def run_network():
     name        = NAME
     no_slices   = NO_SLICES
     first, last = data(NAME).first, data(NAME).last
 
-    last += 1
+    last+=1
     total = last-first
 
     set_size = int( total/no_slices )
@@ -47,15 +46,15 @@ def run_ratiometric():
     for i in range(0, no_slices):
         start   = set_size * i +first
         end     = set_size * (i+1) + first
-        com = command_ratiometric(start, end)
+        com = command_network(start, end)
         sub_command(com)
 
     print('remaining: ')
     ### if some remain...
     while last_sub < last:
-        com = command_ratiometric(last_sub, last_sub+1)
+        com = command_network(last_sub, last_sub+1)
         sub_command(com)
-        last_sub += 1
+        last_sub +=1
 
 ############################################
 
@@ -63,9 +62,6 @@ def run_skeleton():
     com  =  'qsub -v NAME=' + NAME + ',COL=' + COLOR + to_qsub + 'qsub_skeleton.sh'
     sub_command(com)
 
-def run_snr():
-    com  =  'qsub -v NAME=' + NAME + to_qsub + 'qsub_snr.sh'
-    sub_command(com)
 
 def run_animation(key):
     first, last = data(NAME).first, data(NAME).last
@@ -77,23 +73,18 @@ def run_animation(key):
     sub_command(com)
 
 
-def run_tube_profile():
-    com  = 'qsub -v NAME=' + NAME + \
-                    ',NO=' + str(2) + to_qsub + 'qsub_tube_profile.sh'
-    sub_command(com)
-
-
 def run_read():
     first, last = data(NAME).first, data(NAME).last
     com = 'qsub -v NAME=' + NAME + \
                   ',START=' + str(first) + \
                   ',STOP=' + str(last) + \
-                  ',STEP='  + str(50) + to_qsub +  'qsub_read_rat.sh'
+                  ',STEP=' + str(50) + \
+                  ',COL=' + COLOR + to_qsub +  'qsub_read_net.sh'
     sub_command(com)
 
 ############################################
 def run_phase():
-    com  =  'qsub -v NAME=' + NAME + to_qsub + 'qsub_phase.sh'
+    com  =  'qsub -v NAME=' + NAME + ',COL=' + COLOR + to_qsub + 'qsub_phase_net.sh'
     sub_command(com)
 
 
@@ -117,16 +108,13 @@ if SKIP:
 else:
     if not IGNORE_CONV:
         check_and_wait(100, 'czi_')
-    run_ratiometric()
-    check_and_wait(100, 'ratiomet')
+    run_network()
+    check_and_wait(100, 'netw')
 
 
 run_skeleton()
-run_snr()
-run_tube_profile()
 run_read()
 run_animation('skeleton')
-run_animation('raw')
 
 
 check_and_wait(100, 'skelet')

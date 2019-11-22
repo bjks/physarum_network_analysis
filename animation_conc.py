@@ -163,7 +163,6 @@ def anim_npz(data_sets, frame_step, keyword):
         elif keyword == 'skeleton':
             mask        = np.load(set.file_dat + '.npz')['mask'].astype(int)
             skeleton    = np.load(set.file_dat + '.npz')['skeleton'].astype(int)
-            back        = np.load(set.file_dat + '.npz')['texas_clean'].astype(float)
 
             selem = morph.disk(5)
             thick_skeleton = morph.dilation(skeleton, selem)
@@ -171,7 +170,6 @@ def anim_npz(data_sets, frame_step, keyword):
             image = mask + thick_skeleton
             cmap = mc.get_cmap('Blues')
 
-            temp_map = np.where(image == 0, np.nan, image)
             temp_im = ax.imshow(image, animated=True, cmap=cmap)
 
         images.append([temp_im, title])

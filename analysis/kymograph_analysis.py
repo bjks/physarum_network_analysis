@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib import cm
+from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 
 from matplotlib import rc
 rc('text', usetex=True)
@@ -13,6 +15,12 @@ from scipy import stats
 from scipy.optimize import curve_fit
 from scipy import signal
 from skimage.util.shape import view_as_windows
+
+from scipy import LowLevelCallable
+
+import numba
+from numba import cfunc, carray
+from numba.types import intc, CPointer, float64, intp, voidptr
 
 
 import os
@@ -35,7 +43,7 @@ from skimage.feature import match_template
 
 class kymograph:
     """
-    class that collects kymograph data array, axis information and useful
+    class that collects kymograph data array, axis scaling and useful
     information for plotting:
 
         self.kymo       data array
@@ -49,6 +57,10 @@ class kymograph:
 
         self.cmap       cmap used for plotting
         self.color      color used for plotting
+
+
+    transformation methods (hilbert, bandpass, etc.) are implemented as
+    constructors, ie return new instances
 
 
     """
@@ -70,6 +82,13 @@ class kymograph:
 
         self.cmap       = cmap
         self.color      = color
+
+
+    def __getitem__(self, index):
+        return self.kymo[index]
+
+    def __setitem(self, index, dat):
+        self.kymo[index] = dat
 
 
 
@@ -158,21 +177,20 @@ class kymograph:
         return new
 
 
-    def detrend(self, window_size_in_s, sig=None, method='window'):
-
-        window_size = int(window_size_in_s/self.t_scaling)
+    def detrend(self, tsig1, tsig2=None, psig1=50, psig2=5, method='gauss'):
 
         if method == 'window':
+            window_size = int(tsig1/self.t_scaling)
             glob = slid_aver2d(self.kymo, window_size, axis=1)
 
         elif method == 'gauss':
-            glob = ndi.gaussian_filter(self.kymo, window_size)
+            sigma = (psig1, tsig1/self.t_scaling)
+            glob = ndi.gaussian_filter(self.kymo, sigma)
 
         detrended = self.kymo -  glob
 
-        if sig != None:
-            sigma = sig / self.t_scaling
-            detrended = ndi.gaussian_filter(detrended, sigma)
+        sigma = (psig2, tsig2 / self.t_scaling)
+        detrended = ndi.gaussian_filter(detrended, sigma)
 
         new = self.copy_meta(detrended)
         new.state = 'detrended'
@@ -252,11 +270,8 @@ class kymograph:
                             green_c.state,
                             cmap)
 
-        new.state = 'cropped'
         new.color = color
-
         return new
-
 
 
 
@@ -389,7 +404,7 @@ def adaptive_butter_2d(data2d, fs, dom_freq, bandwidth, order, min_lowcut=0.001)
 
     for i in range(band_centers.size):
 
-        lowcut = np.max([band_centers[i]-bandwidth[0], min_lowcut ])
+        lowcut = np.max([band_centers[i]+bandwidth[0], min_lowcut ])
         highcut = band_centers[i]+bandwidth[1]
 
         filtered[i] = butter_bandpass2d(data2d, lowcut, highcut, fs, order)
@@ -499,42 +514,42 @@ def dominant_freq(kymo, lowcut=0.05, max_period=None):
     Pxx_den = Pxx_den[f>lowcut]
     f = f[f>lowcut]
 
-
     dominant_freq = f[np.argmax(Pxx_den)]
     return dominant_freq
 
 
 
-def power_spec(kymo, filename,
-                lowcut=0.005, highcut=0.05, #periods between 200 and 20s
-                min_period=None, max_period=None,
-                mark_freq=None, band=None,
+def power_spec(kymo, filename, min_frequency, lowcut=0.005, highcut=0.05, band=None,
                 logscale=False):
 
-
-    if min_period!=None and max_period!=None:
-        lowcut = 1./max_period
-        highcut = 1./min_period
-
-    f1, Pxx_den1 = signal.periodogram(kymo.kymo, fs=1./kymo.t_scaling,
+    f, Pxx_den_full = signal.periodogram(kymo.kymo, fs=1./kymo.t_scaling,
                                 scaling='spectrum')
-    # Pxx_den1 = ndi.gaussian_filter(Pxx_den1, sigma=2)
 
 
-    range = (f1 < highcut) * (f1 > lowcut)
+    #### dominant frequency ->
+    P = np.mean(Pxx_den_full, axis=0)
+    P_cut = P[f>min_frequency]
+    freq = f[f>min_frequency]
+    dominant_freq = freq[np.argmax(P_cut)]
+    #### <-
 
-    Pxx_den1    = Pxx_den1[:,range]
-    f1          = f1[range] * 1e3 ### go to mHz
+
+    # adjust for plotting..
+    range = (f < highcut) * (f > lowcut)
+    f          = f[range] * 1e3 ### switch to mHz
+    Pxx_den_full    = Pxx_den_full[:,range]
 
     if logscale:
-        Pxx_den1 = np.log(Pxx_den1)
+        Pxx_den_full = np.log(Pxx_den_full)
+
+
+    Pxx_den         = np.mean(Pxx_den_full, axis=0)
 
     fig, axes = plt.subplots(2,1)
     ax = axes.ravel()
 
-
-
-    im = ax[0].imshow(Pxx_den1, aspect='auto', cmap='plasma')
+    # plotting...
+    im = ax[0].imshow(Pxx_den_full, aspect='auto', cmap='plasma')
 
     cax = fig.add_axes([0.2, 0.95, 0.6, 0.05])
     cbar = fig.colorbar(im, cax=cax, orientation='horizontal')
@@ -548,32 +563,20 @@ def power_spec(kymo, filename,
     ax[0].set_ylabel('pixel')
 
 
-    # divider = make_axes_locatable(ax[0])
-    # fig.colorbar(im, cax = divider.append_axes('right',size='5%', pad=0.05),
-    #              orientation='horizontal')
-    # fig.colorbar(im, cax = ax[0], orientation='horizontal', fraction=.1)
-
-
-
-    ax[1].plot(f1, np.mean(Pxx_den1, axis=0))
-    # peaks, _ = find_peaks(np.mean(Pxx_den1, axis=0), distance=10)
     #
-    # ax[1].set_xticks(f1[peaks])
-    # ax[1].set_yticks([])
-    if mark_freq != None:
-        ax[1].axvline(x=mark_freq*1e3, linewidth=1, color='red',
-            label='dominant frequency: ' +
-            str(np.around(mark_freq*1e3, decimals=2)) + ' mHz')
+    ax[1].plot(f, Pxx_den)
 
-        ax[1].legend()
+    ax[1].axvline(x=dominant_freq*1e3, linewidth=1, color='red',
+        label='dominant frequency: ' +
+        str(np.around(dominant_freq*1e3, decimals=2)) + ' mHz')
 
-    if band != None:
-        ax[1].axvspan(np.min(band)*1e3, np.max(band)*1e3, facecolor='0.2',
+    if np.all(band != None):
+        mark1 = (dominant_freq + band[0]) * 1e3
+        mark2 = (dominant_freq + band[1]) * 1e3
+        ax[1].axvspan(mark1, mark2, facecolor='0.2',
                         alpha=0.3, label='frequency band')
 
-        ax[1].legend()
-
-
+    ax[1].legend()
 
     ax[1].xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ax[1].set_xlabel('frequency (mHz)')
@@ -582,7 +585,7 @@ def power_spec(kymo, filename,
     else:
         ax[1].set_ylabel('power')
 
-    ax[1].set_xlim(f1[0], f1[-1])
+    ax[1].set_xlim(f[0], f[-1])
     # fig.tight_layout()
 
 
@@ -590,15 +593,17 @@ def power_spec(kymo, filename,
                 bbox_inches='tight')
     plt.close()
 
+    return dominant_freq
 
 
-def spectro(kymo, filename, logscale=False, window_size_in_s=500, overlab=2):
+
+def spectro(kymo, filename, logscale=False, window_size_in_s=500, overlap=2):
 
     window_size = int(window_size_in_s/kymo.t_scaling)
 
     window = signal.windows.blackmanharris(window_size)
     f, t, Sxx = signal.spectrogram(kymo.kymo, window = window,
-                                    noverlap = window_size/overlab,
+                                    noverlap = window_size/overlap,
                                     fs=1./kymo.t_scaling, axis=-1)
 
 
@@ -620,7 +625,12 @@ def spectro(kymo, filename, logscale=False, window_size_in_s=500, overlab=2):
     ax.set_xlabel('time (s)')
     ax.set_ylabel('frequency (mHz)')
 
-    im = ax.pcolormesh(t,  1e3 * f, Sxx, cmap='plasma')
+
+    extent =    [0, kymo.kymo.shape[1]*kymo.t_scaling,
+                 0, f[-1]*1e3]
+
+    im = ax.imshow(Sxx, cmap='plasma', extent=extent, origin='lower',
+                    aspect='auto')
 
     divider = make_axes_locatable(ax)
     fig.colorbar(im, cax = divider.append_axes('right', size='5%', pad=0.05),
@@ -630,52 +640,103 @@ def spectro(kymo, filename, logscale=False, window_size_in_s=500, overlab=2):
                 bbox_inches='tight')
     plt.close()
 
-
-
-
     return dom_freq
+
+
 
 # ===================================================== #
 #  phase_shift2d   #
 # ===================================================== #
 
+
+
+# speeding up generic filter
+def jit_filter_function(filter_function):
+    jitted_function = numba.jit(filter_function, nopython=True)
+    @cfunc(intc(CPointer(float64), intp, CPointer(float64), voidptr))
+    def wrapped(values_ptr, len_values, result, data):
+        values = carray(values_ptr, (len_values,), dtype=float64)
+        result[0] = jitted_function(values)
+        return 1
+    return LowLevelCallable(wrapped.ctypes)
+
+
+
+@jit_filter_function
+def average_circular_dat(angles):
+    """
+    angles = set of angles in rad
+    https://en.wikipedia.org/wiki/Mean_of_circular_quantities
+    """
+    y = np.mean(np.sin(angles))
+    x = np.mean(np.cos(angles))
+
+    return np.arctan2(y, x)
+
+
+def uni_filter_circular(arr, size_tuple):
+
+    footprint=np.ones(size_tuple)
+    return ndi.generic_filter(arr, average_circular_dat,
+                                footprint=footprint, mode='reflect')
+
+
+
+
 def phase_shift2d(phase1, phase2, filename):
 
     shift = phase1.kymo - phase2.kymo
 
+
+    # map into  -pi, pi interval:
     shift = (shift + np.pi) % (2*np.pi) - np.pi
 
+    #
+    footprint = (50, int(400/phase1.t_scaling))
+    avg_shift = uni_filter_circular(shift, footprint)
 
-    fig, ax = plt.subplots()
 
-    ax.set_title('phase shift')
+    ### plot ###
+    # ........................................................................
+    fig, axes = plt.subplots(2,1)
+    ax = axes.ravel()
+    plt.subplots_adjust(hspace=0.7)
 
-    ax.set_ylabel('space (pixel)')
-    ax.set_xlabel('time (s)')
+    ax[0].set_title('phase shift')
+    ax[0].set_ylabel('space (pixel)')
+
+    ax[1].set_title('phase shift (uniform filter '+str(footprint)+')')
+    ax[1].set_xlabel('time (s)')
+    ax[1].set_ylabel('space (pixel)')
+
 
     # limits
     extent =    [0, phase1.kymo.shape[1]*phase1.t_scaling,
                  0, phase1.kymo.shape[0]]
-
-    # plot
-    im = ax.imshow(shift, extent=extent, origin='lower',
-                    aspect='auto', cmap='twilight_r',)
-                    # vmin=-np.pi, vmax=+np.pi)
-
 
     # colorbar ticks
     ticks = np.array([-np.pi, -np.pi/2, 0, np.pi/2 ,np.pi])
     labels = [r'$-\pi$',r'$-\pi/2$', '0', r'$\pi/2$', r'$\pi$']
 
 
-    # colorbar
-    divider = make_axes_locatable(ax)
-    cbar = fig.colorbar(im, cax = divider.append_axes('right', size='5%',
-                        pad=0.05), orientation='vertical', ticks=ticks)
+    # twilight_r = cm.get_cmap('twilight_r', 100)
+    # newcolors = twilight_r(np.linspace(0, 1, 100))
+    # pink = np.array([248/256, 24/256, 148/256, 1])
+    # newcolors[25:75, :] = pink
+    # newcmp = ListedColormap(newcolors)
+
+    im = ax[0].imshow(shift, extent=extent, origin='lower',
+                    aspect='auto', cmap='twilight')
+
+
+
+    im = ax[1].imshow(avg_shift, extent=extent, origin='lower',
+                    aspect='auto', cmap='twilight')
+
+    cbar = fig.colorbar(im, ax=ax.tolist(), orientation='vertical', ticks=ticks)
     cbar.ax.set_yticklabels(labels)
 
     plt.savefig(filename  + 'phase_shift_map.pdf', dpi=400, bbox_inches='tight')
-
     plt.close()
 
     return shift

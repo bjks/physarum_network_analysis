@@ -1,43 +1,125 @@
 from __future__ import division
 import numpy as np
-from scipy import integrate, interpolate
-from scipy.signal import butter, lfilter, spectrogram
 
-slack_l, slack = 0.1, 1
-cutoff = 50
-L = 25
+__version__ = "2013-08-29 aug denis"
 
-from scipy.io import wavfile
-x = 
-sr, x = wavfile.read('capriccio.wav')
-x = x[:(L + slack) * sr, 0]
-x = x
+#...............................................................................
+class LMS:
+    """ lms = LMS( Wt, damp=.5 )  Least mean squares adaptive filter
+    in:
+        Wt: initial weights, e.g. np.zeros( 33 )
+        damp: a damping factor for swings in Wt
 
-# sr = 44100
-# x = np.random.normal(size=((L + slack) * sr,))
+    # for t in range(1000):
 
-b, a = butter(2, 2 * cutoff / sr, btype='low')  # Butterworth
+    yest = lms.est( X, y [verbose=] )
+    in: X: a vector of the same length as Wt
+        y: signal + noise, a scalar
+        optional verbose > 0: prints a line like "LMS: yest y c"
+    out: yest = Wt.dot( X )
+        lms.Wt updated
 
-# cutoff function
-def f(t):
-    return (10000 - 1000 * np.clip(t, 0, 9) - 1000 * np.clip(t-19, 0, 0.8)) \
-            / cutoff
+    How it works:
+    on each call of est( X, y ) / each timestep,
+    increment Wt with a multiple of this X:
+        Wt += c X
+    What c would give error 0 for *this* X, y ?
 
-# and its reciprocal
-def fr(_, t):
-    return cutoff / (10000 - 1000 * t.clip(0, 9) - 1000 * (t-19).clip(0, 0.8))
+        y = (Wt + c X) . X
+        =>
+        c = (y  -  Wt . X)
+            --------------
+               X . X
 
-# modulate time
-# calculate upper end of td first
-tdmax = integrate.quad(f, 0, L + slack_l, points=[9, 19, 19.8])[0]
-span = (0, tdmax)
-t = np.arange(x.size) / sr
-tdinfo = integrate.solve_ivp(fr, span, np.zeros((1,)),
-                             t_eval=np.arange(0, span[-1], 1 / sr),
-                             vectorized=True)
-td = tdinfo.y.ravel()
-# modulate signal
-xd = interpolate.interp1d(t, x)(td)
-# and linearly filter
-yd = lfilter(b, a, xd)
-# modulate signal back to linear time
+    Swings in Wt are damped a bit with a damping factor a.k.a. mu in 0 .. 1:
+        Wt += damp * c * X
+
+    Notes:
+        X s are often cut from a long sequence of scalars, but can be anything:
+        samples at different time scales, seconds minutes hours,
+        or for images, cones in 2d or 3d x time.
+
+"""
+
+# See also:
+#     http://en.wikipedia.org/wiki/Least_mean_squares_filter
+#     Mahmood et al. Tuning-free step-size adaptation, 2012, 4p
+# todo: y vec, X (Wtlen,ylen)
+
+#...............................................................................
+    def __init__( self, Wt, damp=.5 ):
+        self.Wt = np.squeeze( getattr( Wt, "A", Wt ))  # matrix -> array
+        self.damp = damp
+
+    def est( self, X, y, verbose=0 ):
+        X = np.squeeze( getattr( X, "A", X ))
+        yest = self.Wt.dot(X)
+        c = (y - yest) / X.dot(X)
+            # clip to cmax ?
+        self.Wt += self.damp * c * X
+        # if verbose:
+        #     print "LMS: yest %-6.3g   y %-6.3g   err %-5.2g   c %.2g" % (
+        #         yest, y, yest - y, c )
+        return yest
+
+#...............................................................................
+if __name__ == "__main__":
+    import sys
+
+    filterlen = 10
+    damp = .1
+    nx = 500
+    f1 = 40  # chirp
+    noise = .05 * 2  # * swing
+    plot = 1
+    seed = 0
+
+    exec( "\n".join( sys.argv[1:] ))  # run this.py n= ...  from sh or ipython
+    np.set_printoptions( 2, threshold=100, edgeitems=10, linewidth=80, suppress=True )
+    np.random.seed(seed)
+
+    def chirp( n, f0=2, f1=40, t1=1 ):  # <-- your test function here
+        # from $scipy/signal/waveforms.py
+        t = np.arange( n + 0. ) / n * t1
+        return np.sin( 2*np.pi * f0 * (f1/f0)**t )
+
+    Xlong = chirp( nx, f1=f1 )
+    # Xlong = np.cos( 2*np.pi * freq * np.arange(nx) )
+    if noise:
+        Xlong += np.random.normal( scale=noise, size=nx )  # laplace ...
+    Xlong *= 10
+
+    # print 80 * "-"
+    title = "LMS  chirp  filterlen %d  nx %d  noise %.2g  damp %.2g " % (
+        filterlen, nx, noise, damp )
+    # print title
+    ys = []
+    yests = []
+
+#...............................................................................
+    lms = LMS( np.zeros(filterlen), damp=damp )
+    for t in range( nx - filterlen ):
+        X = Xlong[t:t+filterlen]
+        y = Xlong[t+filterlen]  # predict
+        yest = lms.est( X, y, verbose = (t % 10 == 0) )
+        ys += [y]
+        yests += [yest]
+
+    y = np.array(ys)
+    yest = np.array(yests)
+    err = yest - y
+    averr = "av %.2g += %.2g" % (err.mean(), err.std())
+    # print "LMS yest - y:", averr
+    # print "LMS weights:", lms.Wt
+
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots( nrows=2 )
+    fig.set_size_inches( 12, 8 )
+    fig.suptitle( title, fontsize=12 )
+    ax[0].plot( y, color="orangered", label="y" )
+    ax[0].plot( yest, label="yest" )
+    ax[0].legend()
+    ax[1].plot( err, label=averr )
+    ax[1].legend()
+
+    plt.show()
