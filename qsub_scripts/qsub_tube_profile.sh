@@ -9,4 +9,4 @@
 #$ -V
 #$ -o /data.bpm/bksche/std/std_tube_out
 #$ -e /data.bpm/bksche/std/std_tube_err
-python3 /data.bpm/bksche/network_analysis/tube_profile.py ${NAME} ${NO}
+python3 /data.bpm/bksche/network_analysis/ratiometric/tube_profile.py ${NAME} ${NO}

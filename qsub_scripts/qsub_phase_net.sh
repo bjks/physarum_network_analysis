@@ -9,4 +9,4 @@
 #$ -V
 #$ -o /data.bpm/bksche/std/std_phase_net_out
 #$ -e /data.bpm/bksche/std/std_phase_net_err
-python3 /data.bpm/bksche/network_analysis/phase_hilbert_net.py ${NAME} ${COL}
+python3 /data.bpm/bksche/network_analysis/network/phase_hilbert_net.py ${NAME} ${COL}

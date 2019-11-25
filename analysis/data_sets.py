@@ -16,6 +16,11 @@ def mk_mising_dir(path_name):
 
 
 class data_paths:
+    """
+    Takes string parameters and composes filenames of raw images and output 
+    files
+    Note that this class does not know about config files
+    """
     def __init__(self, image_prefix, no, zeros, texas, green, bf):
 
         if self.subdir == None:
@@ -29,9 +34,9 @@ class data_paths:
             dir_plots           = '/data.bpm/bksche/plots/'
 
         else:                               # local
-            dir_raw             = '../image_data/'     + dir + '/'
-            dir_results         = '../results/'
-            dir_plots           = '../plots/'
+            dir_raw             = '/Users/bjoern/image_analysis/image_data/'     + dir + '/'
+            dir_results         = '/Users/bjoern/image_analysis/results/'
+            dir_plots           = '/Users/bjoern/image_analysis/plots/'
 
 
         for d in [dir_results, dir_plots]:
@@ -39,34 +44,27 @@ class data_paths:
             if self.subdir != None:
                 mk_mising_dir(d + self.path + '/' +self.subdir)
 
-        self.core1           = image_prefix + str(no).zfill(zeros)
-        if self.color == 'gt':
-            self.core2           = image_prefix + str(no+1).zfill(zeros)
-        else:
-            self.core2           = image_prefix + str(no).zfill(zeros)
+        core = image_prefix + str(no).zfill(zeros)
 
         if bf != None:
             bf = [x.strip() for x in bf.split()]
             if np.size(bf)>1:
-                self.file_raw = [dir_raw + self.core1 + b + '.tif' for b in bf]
+                self.file_raw = [dir_raw + core + b + '.tif' for b in bf]
             elif np.size(bf)==1:
-                self.file_raw = dir_raw + self.core1 + bf[0] + '.tif'
+                self.file_raw = dir_raw + core + bf[0] + '.tif'
             else:
-                self.file_raw = dir_raw + self.core1 + '.tif'
+                self.file_raw = dir_raw + core + '.tif'
 
         if green != None:
-            self.file_raw1      = dir_raw + self.core1 + green + '.tif'
+            self.file_raw1      = dir_raw + core + green + '.tif'
         if texas != None:
-            self.file_raw2      = dir_raw + self.core2 + texas + '.tif'
+            self.file_raw2      = dir_raw + core + texas + '.tif'
 
 
+        self.path_results   = dir_results + dir + '/'
+        self.path_plots     = dir_plots + dir + '/'
 
-
-
-        self.path_results   = '../results/'    + dir + '/'
-        self.path_plots     = '../plots/'      + dir + '/'
-
-        full_file = self.core1   + '_' + self.method + '_' + self.color
+        full_file = core   + '_' + self.method + '_' + self.color
         set_file  = 'set'        + '_' + self.method + '_' + self.color
 
         if self.lower_thresh != None:
@@ -91,17 +89,23 @@ import configparser
 import json
 
 class data(data_paths):
+    """
+    Class interpreting config files given as file_name and read as
+    '../config/' + file_name + '.ini' (relative path!)
+    calls super class constructor data_paths which handles filenames and
+    data structure
+    """
     def __init__(self, file_name, no=1, method='', color='sep'):
 
         config = configparser.ConfigParser()
-        config_file = 'config/' + file_name + '.ini'
+        config_file = '../config/' + file_name + '.ini'
         config.read(config_file)
         params = config['params']
 
         self.method         = method
 
 
-        # read params
+        # directories. subdir is optional
         self.path           = params.get('path')
         self.subdir         = params.get('subdir', None)
         self.color          = params.get('color', color)
@@ -110,14 +114,15 @@ class data(data_paths):
         # sigma of gaussian_filter and threshold that is used in mask
         self.sigma          = params.getfloat('sigma', 5.)
         self.threshold      = params.getfloat('threshold', 1.3)
-        # sigma that is used for halo substraction to improve mask
+        # sigma that is used for halo substraction to improve mask, optional
         self.halo_sig       = params.getfloat('halo_sig', None)
 
         # radius that is used in disk_filter and threshold to remove spots
+        # if one of these params is not given, remove_spots is scipped
         self.spots_radius   = params.getfloat('spots_radius', None)
         self.thresh_spots   = params.getfloat('thresh_spots', None)
 
-
+        # lower threshold to get only background, used for background_correction
         self.lower_thresh   = params.getfloat('lower_thresh', None)
 
         # number of conncted areas that are interpreted as networks
@@ -125,10 +130,15 @@ class data(data_paths):
         self.extract        = params.getint('extract', 1)
         self.branch_thresh  = params.getint('branch_thresh', 10)
 
-
+        # if analyse flow, flow_analysis is called, bf frames as channels is
+        # assumed
         self.analyse_flow   = params.getboolean('analyse_flow', False)
-        self.symm_setup     = params.getboolean('symm_setup', False)
 
+        # if green and texas channel are images in a symmetric way,
+        # interpolation is used to shift signals accordingly to account for
+        # time shift between imaging
+        # assumed order per frame: 1. texas 2. green
+        self.symm_setup     = params.getboolean('symm_setup', False)
 
         # frame interval in seconds and scaling (um(!) per pixel)
         self.frame_int      = params.getfloat('frame_int', 1.0)
@@ -137,6 +147,8 @@ class data(data_paths):
         self.first          = params.getint('first', 1)
         self.last           = params.getint('last')
 
+        # times (in frame number) and positions (in pixels) can be defined
+        # to focus only on these regions in kymograph_analysis
         self.times = tuple(int(t) if t != 'None' else None
                         for t in params.get('times', 'None None').split())
 
@@ -144,12 +156,15 @@ class data(data_paths):
                         for t in params.get('positions', 'None None').split())
 
 
-        image_prefix        = params.get('image_prefix')
-        texas               = params.get('texas', '')
-        green               = params.get('green', '')
+        # channel naming, image prefix (stuff before frame number)
+        image_prefix        = params.get('image_prefix', subdir + '_t')
+        texas               = params.get('texas', None)
+        green               = params.get('green', None)
 
         bf                  = params.get('bf', None)
 
+        # digits in image names, note that this is not given by total number of
+        # frames as analysis might only handle a subset of available images
         zeros               = params.getint('zeros', 3)
 
         super(data, self).__init__(image_prefix, no, zeros,

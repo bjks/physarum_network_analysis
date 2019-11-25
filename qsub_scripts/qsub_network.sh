@@ -9,4 +9,4 @@
 #$ -V
 #$ -o /data.bpm/bksche/std/std_net_out
 #$ -e /data.bpm/bksche/std/std_net_err
-python3 /data.bpm/bksche/network_analysis/network.py ${NAME} ${COL} ${START} ${END}
+python3 /data.bpm/bksche/network_analysis/network/network.py ${NAME} ${COL} ${START} ${END}

@@ -9,4 +9,4 @@
 #$ -V
 #$ -o /data.bpm/bksche/std/std_read_out
 #$ -e /data.bpm/bksche/std/std_read_err
-python3 /data.bpm/bksche/network_analysis/read_ratiometric.py ${NAME} ${START} ${STOP} ${STEP}
+python3 /data.bpm/bksche/network_analysis/ratiometric/read_ratiometric.py ${NAME} ${START} ${STOP} ${STEP}

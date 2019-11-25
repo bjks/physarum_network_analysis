@@ -6,7 +6,6 @@ from matplotlib.ticker import FormatStrFormatter
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib import cm
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap
-
 from matplotlib import rc
 rc('text', usetex=True)
 
@@ -14,19 +13,21 @@ from scipy import ndimage as ndi
 from scipy import stats
 from scipy.optimize import curve_fit
 from scipy import signal
-from skimage.util.shape import view_as_windows
-
 from scipy import LowLevelCallable
 
 import numba
 from numba import cfunc, carray
 from numba.types import intc, CPointer, float64, intp, voidptr
 
-
 import os
 import itertools
 import copy
 
+from skimage.util.shape import view_as_windows
+from skimage import feature
+from skimage import transform
+from skimage.util.shape import view_as_windows
+from skimage.feature import match_template
 
 from analysis.data_sets import *
 from analysis.tools import *
@@ -34,11 +35,6 @@ from analysis.network_analysis import *
 from analysis.skeleton_analysis import *
 from analysis.plotting import *
 
-
-from skimage import feature
-from skimage import transform
-from skimage.util.shape import view_as_windows
-from skimage.feature import match_template
 
 
 class kymograph:

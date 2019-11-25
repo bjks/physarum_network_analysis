@@ -9,4 +9,4 @@
 #$ -V
 #$ -o /data.bpm/bksche/std/std_snr_out
 #$ -e /data.bpm/bksche/std/std_snr_err
-python3 /data.bpm/bksche/network_analysis/snr.py ${NAME} sep
+python3 /data.bpm/bksche/network_analysis/ratiometric/snr.py ${NAME} sep

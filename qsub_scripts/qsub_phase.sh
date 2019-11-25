@@ -9,4 +9,4 @@
 #$ -V
 #$ -o /data.bpm/bksche/std/std_phase_out
 #$ -e /data.bpm/bksche/std/std_phase_err
-python3 /data.bpm/bksche/network_analysis/phase_hilbert.py ${NAME}
+python3 /data.bpm/bksche/network_analysis/ratiometric/phase_hilbert.py ${NAME}

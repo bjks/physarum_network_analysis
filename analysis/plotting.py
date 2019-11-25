@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
-from analysis.tools import *
 from analysis.network_analysis import *
 
 def plot_image(file_dat, keyword, file_plot, show=False):

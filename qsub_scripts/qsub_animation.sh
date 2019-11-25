@@ -9,4 +9,4 @@
 #$ -V
 #$ -o /data.bpm/bksche/std/std_ani_out
 #$ -e /data.bpm/bksche/std/std_ani_err
-python3 /data.bpm/bksche/network_analysis/animation_conc.py ${NAME} ${KEY} ${COL} ${NO}
+python3 /data.bpm/bksche/network_analysis/animation/animation_npz.py ${NAME} ${KEY} ${COL} ${NO}

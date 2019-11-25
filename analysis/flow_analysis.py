@@ -67,9 +67,10 @@ def flow_quantification(frame_a, frame_b, mask,
                         search_extend=20,
                         return_scalar_v=True,
                         corr_tresh=0.5,
-                        outlier_thresh=None):
+                        outlier_thresh=None,
+                        mask_crit=np.all):
     """
-    mask                windows that contain only masked pixel are ignored
+    mask                windows are ignored based in mask, see mask_crit
     upsample            upsample images to get subpixel precision
     window_size         window for corr given by window_size * window_size
     sampling            sampling step between pixels that serve as seeds for window
@@ -77,6 +78,9 @@ def flow_quantification(frame_a, frame_b, mask,
     return_scalar_v     returns (signed) scalar value for velocity
     corr_tresh          minimal max(corr) to be accepted for flow field
     outlier_thresh      replace outlier with local mean if value > outlier_thresh * local mean
+    mask_crit           function, mask_window m has to fullfil mask_crit(m)
+                        otherwise the point in the flow_field is ignored, use
+                        eg np.any(m) or np.all(m) etc
     """
 
     s_min = search_extend * upsample
@@ -108,7 +112,7 @@ def flow_quantification(frame_a, frame_b, mask,
 
 
             # must only contain non masked pixels, alternatively use .any()
-            if np.all(m):
+            if mask_crit(m):
                 b = b_windows[i,j]
 
                 corr = match_template(b,a)

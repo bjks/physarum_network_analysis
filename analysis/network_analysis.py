@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import skimage.morphology as morph              # skeleton
 from skimage.measure import regionprops         # extract_network
 from skimage.filters import threshold_otsu      # mask
-from skimage.feature import peak_local_max
 
 
 from scipy import ndimage as ndi                    # gaussian_filter

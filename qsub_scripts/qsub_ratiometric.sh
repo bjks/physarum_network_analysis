@@ -9,4 +9,4 @@
 #$ -V
 #$ -o /data.bpm/bksche/std/std_rat_out
 #$ -e /data.bpm/bksche/std/std_rat_err
-python3 /data.bpm/bksche/network_analysis/ratiometric.py ${NAME} ${START} ${END}
+python3 /data.bpm/bksche/network_analysis/ratiometric/ratiometric.py ${NAME} ${START} ${END}
