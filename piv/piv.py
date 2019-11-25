@@ -57,6 +57,8 @@ def main(): ## python3 piv.py <keyword> <color> <first> <last(+1)>
         process_network(data(set_keyword, i,    method='piv', color=color),
                         data(set_keyword, i+1,  method='piv', color=color) )
 
+    log_message(data_sets[0], 'piv', start, stop)
+
 
 if __name__ == "__main__":
     main()

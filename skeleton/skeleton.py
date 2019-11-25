@@ -128,6 +128,7 @@ def main(): ## python3 skeleton.py NAME
     p.close()
     p.join()
 
+    log_message(data_sets[0], 'skeleton')
 
 if __name__ == "__main__":
     main()

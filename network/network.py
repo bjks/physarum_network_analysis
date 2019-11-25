@@ -110,6 +110,8 @@ def main(): ## python3 ratiometric.py <keyword> <first> <last(+1)>
     for set in data_sets:
         process_network(set)
 
+    log_message(data_sets[0], 'network', start, stop)
+
 
 
 if __name__ == "__main__":

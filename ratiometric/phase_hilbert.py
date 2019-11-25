@@ -328,6 +328,7 @@ def main():
         p.close()
         p.join()
 
+    log_message(set, 'phase_hilbert')
 
 if __name__ == '__main__':
     main()

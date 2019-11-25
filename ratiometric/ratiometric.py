@@ -1,11 +1,11 @@
 import skimage.morphology as morph
 import os
-from analysis.plotting import *
 from multiprocessing.dummy import Pool as ThreadPool
 
 import sys
 sys.path.append("..")
 
+from analysis.plotting import *
 from analysis.network_analysis import *
 from analysis.data_sets import *
 from analysis.flow_analysis import *
@@ -123,6 +123,8 @@ def main(): ## python3 ratiometric.py <keyword> <first> <last(+1)>
 
     for set in data_sets:
         process_ratiometric(set)
+
+    log_message(data_sets[0], 'ratiometric', start, stop)
 
 if __name__ == "__main__":
     main()

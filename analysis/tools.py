@@ -1,4 +1,12 @@
 import numpy as np
+import datetime
+
+def log_message(set, script, *add_args):
+    log_message = str(datetime.datetime.now()) + ': ' + script
+    for arg in add_args:
+        log_message += ' ' + str(arg)
+    print(log_message, file=open(set.file_log, "a"))
+
 
 def fft_kymo(signal, frame_int):
 

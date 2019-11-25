@@ -17,7 +17,7 @@ def mk_mising_dir(path_name):
 
 class data_paths:
     """
-    Takes string parameters and composes filenames of raw images and output 
+    Takes string parameters and composes filenames of raw images and output
     files
     Note that this class does not know about config files
     """
@@ -32,16 +32,18 @@ class data_paths:
             dir_raw             = '/data.bpm/zeiss/BjoernZ/' + dir + '/'
             dir_results         = '/data.bpm/bksche/results/'
             dir_plots           = '/data.bpm/bksche/plots/'
+            dir_logs            = '/data.bpm/bksche/logs/'
 
         else:                               # local
-            dir_raw             = '/Users/bjoern/image_analysis/image_data/'     + dir + '/'
+            dir_raw             = '/Users/bjoern/image_analysis/image_data/' + dir + '/'
             dir_results         = '/Users/bjoern/image_analysis/results/'
             dir_plots           = '/Users/bjoern/image_analysis/plots/'
+            dir_logs            = '/Users/bjoern/image_analysis/logs/'
 
 
         for d in [dir_results, dir_plots]:
             mk_mising_dir(d + self.path)
-            if self.subdir != None:
+            if self.subdir != '':
                 mk_mising_dir(d + self.path + '/' +self.subdir)
 
         core = image_prefix + str(no).zfill(zeros)
@@ -64,8 +66,8 @@ class data_paths:
         self.path_results   = dir_results + dir + '/'
         self.path_plots     = dir_plots + dir + '/'
 
-        full_file = core   + '_' + self.method + '_' + self.color
-        set_file  = 'set'        + '_' + self.method + '_' + self.color
+        full_file = core + '_' + self.method + '_' + self.color
+        set_file  = 'set_' + self.method + '_' + self.color
 
         if self.lower_thresh != None:
             full_file += '_back_corr'
@@ -80,6 +82,7 @@ class data_paths:
         self.file_plot_tube_profile = mk_mising_dir(self.path_plots + 'tube_profile/') + set_file
         self.file_plot_set          = self.path_plots + set_file
 
+        self.file_log = dir_logs + self.keyword + '.log'
 
 
 #####################################################
@@ -90,24 +93,25 @@ import json
 
 class data(data_paths):
     """
-    Class interpreting config files given as file_name and read as
-    '../config/' + file_name + '.ini' (relative path!)
+    Class interpreting config files given as keyword and read as
+    '../config/' + keyword + '.ini' (relative path!)
     calls super class constructor data_paths which handles filenames and
     data structure
     """
-    def __init__(self, file_name, no=1, method='', color='sep'):
+    def __init__(self, keyword, no=1, method='', color='sep'):
 
         config = configparser.ConfigParser()
-        config_file = '../config/' + file_name + '.ini'
+        config_file = '../config/' + keyword + '.ini'
         config.read(config_file)
         params = config['params']
 
+        self.keyword        = keyword
         self.method         = method
 
 
         # directories. subdir is optional
         self.path           = params.get('path')
-        self.subdir         = params.get('subdir', None)
+        self.subdir         = params.get('subdir', '')
         self.color          = params.get('color', color)
 
 
@@ -157,7 +161,7 @@ class data(data_paths):
 
 
         # channel naming, image prefix (stuff before frame number)
-        image_prefix        = params.get('image_prefix', subdir + '_t')
+        image_prefix        = params.get('image_prefix', self.subdir + '_t')
         texas               = params.get('texas', None)
         green               = params.get('green', None)
 
