@@ -9,6 +9,7 @@ from analysis.plotting import *
 from analysis.network_analysis import *
 from analysis.data_sets import *
 from analysis.flow_analysis import *
+from analysis.tools import *
 
 
 def process_ratiometric(set):
