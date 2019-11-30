@@ -29,3 +29,8 @@ rsync -azP --dry-run bksche@10.216.2.1:/data.bpm/bksche/results Documents/image_
 
 ----- COUNT ------
 ls -1 | wc -l
+
+
+----- GIT -----
+git remote add origin alimgit@10.216.80.131:ratiometric.git
+git push origin master

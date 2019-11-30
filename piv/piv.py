@@ -7,6 +7,8 @@ sys.path.append("..")
 from analysis.network_analysis import *
 from analysis.data_sets import *
 from analysis.flow_analysis import *
+from analysis.tools import *
+
 
 def process_network(set, set2):
 
@@ -48,6 +50,7 @@ def process_network(set, set2):
 
 def main(): ## python3 piv.py <keyword> <color> <first> <last(+1)>
 
+    print(os.sys.argv)
     set_keyword = os.sys.argv[1].strip()
     color       = os.sys.argv[2].strip()
     start       = int(os.sys.argv[3].strip())

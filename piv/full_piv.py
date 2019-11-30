@@ -25,7 +25,7 @@ to_qsub = ' ' + '/data.bpm/bksche/network_analysis/qsub_scripts/' # space at beg
 ############################################
 
 def command_piv(a, b):
-    return 'qsub -v NAME=' + NAME + ',COL' + COLOR + ',START=' + str(a) + \
+    return 'qsub -v NAME=' + NAME + ',COL=' + COLOR + ',START=' + str(a) + \
             ',END=' + str(b) + to_qsub + 'qsub_piv.sh'
 
 def sub_command(com):
@@ -85,7 +85,7 @@ def check_and_wait(sec, script):
 
 ####################################################################
 ####################################################################
-
+print(os.sys.argv)
 if SKIP:
     pass
 else:

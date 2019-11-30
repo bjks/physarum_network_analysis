@@ -7,7 +7,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib import cm
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 from matplotlib import rc
-rc('text', usetex=True)
+# rc('text', usetex=True)
 
 from scipy import ndimage as ndi
 from scipy import stats
@@ -42,9 +42,9 @@ class kymograph:
     class that collects kymograph data array, axis scaling and useful
     information for plotting:
 
-        self.kymo       data array
+        self.kymo       data array which is scaled (multiplied) with c_scaling
 
-        self.name       name of the quantity eg radius,
+        self.name       name of the quantity eg 'radius',
         self.state      denotes current state of the analysis
 
         self.t_scaling  scalings used for axis labels
@@ -52,11 +52,14 @@ class kymograph:
         self.c_scaling  ...
 
         self.cmap       cmap used for plotting
+        self.unit       unit of data (eg 'a.u.')
         self.color      color used for plotting
 
 
     transformation methods (hilbert, bandpass, etc.) are implemented as
-    constructors, ie return new instances
+    constructor like methods, ie return new instances of kymograph
+
+    methods for plotting are non-class methods
 
 
     """
@@ -65,9 +68,9 @@ class kymograph:
     #  Constructor (-like) and copy methods  #
     # ===================================================== #
     def __init__(self, kymo, name, t_scaling, x_scaling, c_scaling,
-                state='raw', cmap='viridis', color=None):
+                state='raw', cmap='viridis', unit='a.u.', color=None):
 
-        self.kymo       = kymo
+        self.kymo       = kymo * c_scaling
 
         self.name       = name
         self.state      = state
@@ -77,6 +80,7 @@ class kymograph:
         self.c_scaling  = c_scaling
 
         self.cmap       = cmap
+        self.unit       = unit
         self.color      = color
 
 
@@ -93,13 +97,9 @@ class kymograph:
 
 
     def copy_meta(self, new_kymo):
-        return kymograph(new_kymo, self.name,
-                            self.t_scaling,
-                            self.x_scaling,
-                            self.c_scaling,
-                            self.state,
-                            self.cmap,
-                            self.color)
+        new = copy.deepcopy(self)
+        new.kymo = new_kymo
+        return new
 
 
     def get_title(self, for_file_name=True):
@@ -108,9 +108,9 @@ class kymograph:
 
         else:
             if self.state == 'raw':
-                return self.name
+                return self.name + ' (' + self.unit + ')'
             else:
-                return self.state + ' ' + self.name
+                return self.state + ' ' + self.name + ' (' + self.unit + ')'
 
 
     # ===================================================== #
@@ -118,8 +118,9 @@ class kymograph:
     # of kymograph with state 'raw', 'cropped' or 'band'
     # ===================================================== #
 
-    def get_dat(kymos_data, keyword,
-                name, t_s, x_s, c_s, cmap,
+    def get_dat(kymos_data, keyword, name,
+                t_s=1, x_s=1, c_s=1,
+                cmap='viridis', unit='a.u.',
                 align_keyword='reference_point',
                 times=(None,None), positions=(None, None)):
 
@@ -135,7 +136,10 @@ class kymograph:
 
         kymo = kymo[slice(*positions), slice(*times)]
 
-        return kymograph(kymo, name, t_s, x_s, c_s, state='raw', cmap=cmap,
+        return kymograph(kymo, name, t_s, x_s, c_s,
+                        state='raw',
+                        cmap=cmap,
+                        unit=unit,
                         color=None)
 
 
@@ -211,16 +215,20 @@ class kymograph:
         phase = self.copy_meta(instantaneous_phase)
         phase.state = 'phase'
         phase.cmap = 'twilight_shifted'
+        phase.unit = 'rad'
 
         instantaneous_frequency = np.diff(np.unwrap(instantaneous_phase))/(2.0*np.pi)*kymo_b.t_scaling
         freq = self.copy_meta(instantaneous_frequency)
         freq.state = 'freq'
         freq.cmap = 'cool'
+        freq.unit = 'Hz'
+
 
         car = np.cos(instantaneous_phase)
         carrier = self.copy_meta(car)
         carrier.state = 'carrier'
         carrier.cmap = 'cool'
+        carrier.unit = 'a.u.'
 
         return phase, amp, freq, carrier
 
@@ -251,21 +259,14 @@ class kymograph:
             g2 = ndi.zoom(green_c.kymo, (1,2), order=5)[:-1]
             t2 = ndi.zoom(texas_c.kymo, (1,2), order=5)[1:]
 
-            new = kymograph(g2/t2, name,
-                            green_c.t_scaling/2.,
-                            green_c.x_scaling,
-                            green_c.c_scaling,
-                            green_c.state,
-                            cmap)
+            new = green_c.copy_meta(g2/t2)
+            new.t_scaling /= 2.
 
         else:
-            new = kymograph(green_c.kymo/texas_c.kymo, name,
-                            green_c.t_scaling,
-                            green_c.x_scaling,
-                            green_c.c_scaling,
-                            green_c.state,
-                            cmap)
+            new = green_c.copy_meta(green_c.kymo/texas_c.kymo)
 
+        new.name = name
+        new.cmap = cmap
         new.color = color
         return new
 
@@ -315,9 +316,9 @@ def plot_kymograph_series(kymo_list, filename, lim_modes='min'):
                     pad=0.05), orientation='vertical')
 
     plt.subplots_adjust(hspace=0.7)
-    plt.savefig(filename + kymo_list[0].state.join([k.name for k in kymo_list]) + '.pdf',
-                dpi=400, bbox_inches='tight')
 
+    plt.savefig(filename + kymo_list[0].state + ''.join([k.name for k in kymo_list]) + '.pdf',
+                dpi=400, bbox_inches='tight')
     plt.close()
 
 
@@ -593,7 +594,8 @@ def power_spec(kymo, filename, min_frequency, lowcut=0.005, highcut=0.05, band=N
 
 
 
-def spectro(kymo, filename, logscale=False, window_size_in_s=500, overlap=2):
+def spectro(kymo, filename, logscale=False, window_size_in_s=500, overlap=2,
+             lowcut=0., highcut=0.04):
 
     window_size = int(window_size_in_s/kymo.t_scaling)
 
@@ -608,6 +610,12 @@ def spectro(kymo, filename, logscale=False, window_size_in_s=500, overlap=2):
 
 
     #### plotting
+
+    # crop
+    range = (f < highcut) * (f > lowcut)
+    f = f[range]
+    Sxx    = Sxx[range]
+
     if logscale:
         Sxx=np.log(Sxx)
         label = 'log(power)'
@@ -1000,7 +1008,6 @@ def time_shift2d(kymo_a, kymo_b, filename, upsample_t=1, window_size_in_s=200,
                 bbox_inches='tight')
 
     plt.close()
-
 
     return time_shift_map
 

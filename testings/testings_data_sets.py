@@ -10,8 +10,7 @@ from analysis.network_analysis import *
 from analysis.skeleton_analysis import *
 from analysis.data_sets import *
 from analysis.tools import *
-
-
+from analysis.kymograph_analysis import *
 
 
 from timeit import default_timer as timer
@@ -21,10 +20,15 @@ from scipy.ndimage.filters import generic_filter
 from multiprocessing.dummy import Pool as ThreadPool
 
 def main():
-    set_keyword = os.sys.argv[1]
-    data_sets = [data(set_keyword, i, method='inter_mean', color='tg') for i in range(data(set_keyword).first, data(set_keyword).last)]
+    # set_keyword = os.sys.argv[1]
+    # data_sets = [data(set_keyword, i, method='inter_mean', color='tg') for i in range(data(set_keyword).first, data(set_keyword).last)]
 
-    log_message(data_sets[0], 'random_stript')
+    k1=kymograph(1, 'radius', 1,2,3)
+    k2=kymograph(2, 'conce', 1,2,3)
+
+    kymo_list = [k1,k2]
+    print(k1.name)
+    print(k1.name +''.join([k.name for k in kymo_list]))
     ###############################
 
 if __name__ == '__main__':
