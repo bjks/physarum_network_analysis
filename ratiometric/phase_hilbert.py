@@ -222,7 +222,7 @@ def process_phase(set, label):
 
         print('Detrending...')
         radii, conce, inner, outer = \
-            [k.detrend(200, tsig2=20, psig1=1, psig2=5,
+            [k.detrend(tsig1=200, tsig2=20, psig1=1, psig2=5,
             method = 'gauss') for k in [radii, conce, inner, outer]]
 
         plot_kymograph_series([radii, conce], filename)

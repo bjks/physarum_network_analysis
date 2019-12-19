@@ -23,9 +23,9 @@ def read_file(filename):
 def invert_bf(image):
     return - image + np.max(image)
 
-###### visualization tools ######
-### create diluted skeleton and masks the background for plotting ###
+###### visualization tools #####
 def thick_skeleton(skeleton, times = 10):
+    """ create diluted skeleton and masks the background for plotting """
 
     if times > 0:
         selem = morph.disk(times)
@@ -55,6 +55,8 @@ def show_im(image, skel=False):
 # although it costs some storage...
 
 def create_mask(dye, sig, thresh=None, halo_sig=None):
+    """ creates mask of image """
+
     ### if no threshold is given, thresh is determined using Otsu’s method
     if thresh == None:
         smooth = ndi.gaussian_filter(dye, sigma=sig)
@@ -77,6 +79,11 @@ def create_mask(dye, sig, thresh=None, halo_sig=None):
     return mask
 
 def extract_network(mask, n):
+    """
+    returns a modified mask containing only the n largest objects, smaller
+    objects are masked
+    if n==None the mask is returned unchanged
+    """
     if n == None:
         return mask
 
@@ -123,6 +130,11 @@ def interpl_images(dye1, dye2, sigma, threshold, halo_sig):
 #####################################
 
 def node_detection(bitmap):
+    """
+    takes boolean-like 2d array und finds nodes (2 or more neigbours) and
+    endpoints (extractly 1 neigbour) in network
+    returns (nodes, endpoints) as seperate arrays
+    """
     skeleton = np.where(bitmap!=0, 1, 0)
     sum =   (np.roll(skeleton,  1, axis=1) +
              np.roll(skeleton, -1, axis=1) +
@@ -139,7 +151,11 @@ def node_detection(bitmap):
     return nodes, endpoints
 
 
-def remove_branch(branch, endpoints, branch_thresh):
+def remove_branch_crit(branch, endpoints, branch_thresh):
+    """ checks critiria if branch should be removed:
+    1. lenghts < branch_thresh
+    2. contains endpoints (i.e. does not connect anything)
+    """
     if np.max(branch + endpoints) > 1 and np.sum(branch) < branch_thresh:
         return True
     else:
@@ -163,8 +179,18 @@ def inverse_reflect_boundaries(arr):
     return np.hsplit(np.vsplit(arr,3)[1], 3)[1]
 
 
-def extract_skeleton(mask, method='medial_axis', branch_thresh=50,
-                        extract=1, reflect=True):
+def extract_skeleton(mask, method='medial_axis', branch_thresh=50, extract=1):
+    """ creates skeleton of bool-like image, removes small branches
+    (smaller than branch_thresh)
+
+    method = 'medial_axis':
+    returns the line consiting of pixels that have 2 (or more) nearest pixels;
+    often many small branches emerge
+
+    method = 'skeletonize':
+    returns the skeleton calculated via morph. thinning, which does not
+    guarantee to get the center line in a pixel(!) image
+    """
 
     refl_mask = reflect_boundaries(mask)
 
@@ -192,7 +218,7 @@ def extract_skeleton(mask, method='medial_axis', branch_thresh=50,
             branch = np.where(seper_l==l, 1, 0)
             # remove branches that don't connect anything and are shorter than
             # branch_thresh
-            if remove_branch(branch, endpoints, branch_thresh):
+            if remove_branch_crit(branch, endpoints, branch_thresh):
                 medial_axis = np.where(branch==1, 0, medial_axis)
 
         # add nodes to conncect network again
@@ -208,6 +234,8 @@ def extract_skeleton(mask, method='medial_axis', branch_thresh=50,
 
 
 def extract_radii(mask, skeleton):
+    """ returns radii of mask based on nearest non-masked pixel along skeleton
+    """
     distance = ndi.distance_transform_edt(mask)
     local_radii = distance * skeleton # only keeps pixel in skeleton
     return local_radii
@@ -216,6 +244,7 @@ def extract_radii(mask, skeleton):
 ########## replace spots with estim. background, based on nearby pixels #
 
 def disk_filter(dye, mask, r):
+    """ disk filter using a disk with radius r masked pixels are ignored """
     dye_filtered = np.where(mask!=0, dye, np.nan) # 0 -> NaN (to be ignored)
 
     kernel = morph.disk(r)
@@ -226,6 +255,12 @@ def disk_filter(dye, mask, r):
 
 
 def remove_spots(dye, mask, spots_sig, thresh_spots):
+    """ returns mask that marks bright spots in image and a corrected image,
+    where the spots are removed and replaced by neigbourhood intensity
+    calculated by a disk filter with radius spots_sig, spots are defined as
+    pixels brighter than thresh_spots * disk filter neigbourhood
+    if spots_sig==None or thresh_spots==None image is returned unchanged
+    """
     if spots_sig==None or thresh_spots==None:
         return None, dye
 
@@ -284,7 +319,7 @@ def background_correction(dye, file_raw, sigma, lower_thresh, halo_sig):
 #####################################
 
 def calc_ratio(dye, ref):
-    # ratio between two arrays, returns zeros where denominator == 0
+    """ ratio between two arrays, returns zeros where denominator == 0 """
     return np.true_divide(dye, ref, out=np.zeros_like(dye), where=ref!=0)
 
 #####################################
@@ -292,8 +327,9 @@ def calc_ratio(dye, ref):
 #####################################
 
 def tube_radius_at_point(mask, skel, local_radii):
-    ### calculate the radius (or other given quantity) at every position
-    #   in network based on value of the nearest skeleton point
+    """ calculate the radius (or other given quantity) at every position
+    in network based on value of the nearest skeleton point
+    """
     radii = mask.copy().astype(float)
     inds = ndi.distance_transform_edt(np.invert(skel.astype(bool)),
                                       return_distances=False,

@@ -122,19 +122,24 @@ class kymograph:
                 t_s=1, x_s=1, c_s=1,
                 cmap='viridis', unit='a.u.',
                 align_keyword='reference_point',
-                times=(None,None), positions=(None, None)):
+                times=(None,None), positions=(None, None),
+                ismat_file=False):
 
-        alignment = kymos_data['alignment']
 
         kymo      = kymos_data[keyword]
+
+        if ismat_file:
+            kymo = kymo[0,0]
 
         if align_keyword == None:
             kymo = np.transpose(kymo)
         else:
+            alignment = kymos_data['alignment']
             kymo = align_kymo(kymo, align_keyword, alignment=alignment)
             kymo = np.transpose(kymo)
 
         kymo = kymo[slice(*positions), slice(*times)]
+
 
         return kymograph(kymo, name, t_s, x_s, c_s,
                         state='raw',
@@ -177,7 +182,8 @@ class kymograph:
         return new
 
 
-    def detrend(self, tsig1, tsig2=None, psig1=50, psig2=5, method='gauss'):
+    def detrend(self, tsig1=None, tsig2=None, psig1=None, psig2=None, cval=None,
+                method='gauss'):
 
         if method == 'window':
             window_size = int(tsig1/self.t_scaling)
@@ -187,10 +193,14 @@ class kymograph:
             sigma = (psig1, tsig1/self.t_scaling)
             glob = ndi.gaussian_filter(self.kymo, sigma)
 
-        detrended = self.kymo -  glob
+        elif method == 'const':
+            glob = np.ones_like(self.kymo) * cval
 
-        sigma = (psig2, tsig2 / self.t_scaling)
-        detrended = ndi.gaussian_filter(detrended, sigma)
+        detrended = self.kymo - glob
+
+        if psig2!=None and tsig2!=None:
+            sigma = (psig2, tsig2 / self.t_scaling)
+            detrended = ndi.gaussian_filter(detrended, sigma)
 
         new = self.copy_meta(detrended)
         new.state = 'detrended'
@@ -440,13 +450,24 @@ def find_nearest(array, value):
     return array[idx]
 
 
-def plot_time_series(kymos, path, filename=None, window_size=10, min_dist_s=70):
+def plot_time_series(kymos, path=None, filename=None, window_size=10,
+                    min_dist_s=70, spacial_avg=True):
+
     no_kymos = len(kymos)
 
-    for i, kymo in zip(np.arange(no_kymos), kymos):
-        ax = plt.subplot2grid((no_kymos, 3), (i,0), rowspan=1, colspan=2)
+    if np.any(path!=None):
+        colspan=2
+    else:
+        colspan=3
 
-        time_series = slid_aver2d(kymo.kymo, window_size)[::window_size]
+    for i, kymo in zip(np.arange(no_kymos), kymos):
+        ax = plt.subplot2grid((no_kymos, 3), (i,0), rowspan=1, colspan=colspan)
+
+        if spacial_avg:
+            time_series = slid_aver2d(kymo.kymo, window_size)[::window_size]
+        else:
+            time_series = kymo.kymo[::window_size]
+
         timestamps = np.arange(np.shape(time_series)[1]) *  kymos[0].t_scaling
 
 
@@ -475,17 +496,17 @@ def plot_time_series(kymos, path, filename=None, window_size=10, min_dist_s=70):
             ax.set_xlabel('time (s)')
 
 
+    if np.any(path!=None):
+        ax = plt.subplot2grid((no_kymos, 3), (0,2), rowspan=no_kymos, colspan=1)
 
-    ax = plt.subplot2grid((no_kymos, 3), (0,2), rowspan=no_kymos, colspan=1)
+        no_coords = path.shape[0]
 
-    no_coords = path.shape[0]
+        ax.scatter(path[:,1], path[:,0], c=range(no_coords), vmin=0, vmax=no_coords,
+                    cmap='plasma')
 
-    ax.scatter(path[:,1], path[:,0], c=range(no_coords), vmin=0, vmax=no_coords,
-                cmap='plasma')
-
-    ax.axis('equal')
-    ax.invert_yaxis()
-    ax.axis('off')
+        ax.axis('equal')
+        ax.invert_yaxis()
+        ax.axis('off')
 
     plt.subplots_adjust(hspace=0.5)
     plt.savefig(filename + 'time_series.pdf', dpi=400, bbox_inches='tight')
@@ -687,16 +708,15 @@ def uni_filter_circular(arr, size_tuple):
 
 
 
-def phase_shift2d(phase1, phase2, filename):
+def phase_shift2d(phase1, phase2, filename, t_window_in_s=400):
 
     shift = phase1.kymo - phase2.kymo
-
 
     # map into  -pi, pi interval:
     shift = (shift + np.pi) % (2*np.pi) - np.pi
 
     #
-    footprint = (50, int(400/phase1.t_scaling))
+    footprint = (50, int(t_window_in_s/phase1.t_scaling))
     avg_shift = uni_filter_circular(shift, footprint)
 
 
@@ -709,7 +729,11 @@ def phase_shift2d(phase1, phase2, filename):
     ax[0].set_title('phase shift')
     ax[0].set_ylabel('space (pixel)')
 
-    ax[1].set_title('phase shift (uniform filter '+str(footprint)+')')
+    ax[1].set_title('phase shift (uniform filter(x,t(s)): '+ \
+                    str(footprint[0]) + ', ' + \
+                    str(np.around(footprint[1]*phase1.t_scaling)) + \
+                    ')')
+
     ax[1].set_xlabel('time (s)')
     ax[1].set_ylabel('space (pixel)')
 
@@ -730,12 +754,12 @@ def phase_shift2d(phase1, phase2, filename):
     # newcmp = ListedColormap(newcolors)
 
     im = ax[0].imshow(shift, extent=extent, origin='lower',
-                    aspect='auto', cmap='twilight')
+                    aspect='auto', cmap='twilight', vmin=-np.pi, vmax=np.pi)
 
 
 
     im = ax[1].imshow(avg_shift, extent=extent, origin='lower',
-                    aspect='auto', cmap='twilight')
+                    aspect='auto', cmap='twilight', vmin=-np.pi, vmax=np.pi)
 
     cbar = fig.colorbar(im, ax=ax.tolist(), orientation='vertical', ticks=ticks)
     cbar.ax.set_yticklabels(labels)
@@ -773,7 +797,7 @@ def sin_func(phase, A, phi):
     return A * np.cos(phase - phi)
 
 
-def phase_average(phase, kymos, filename, y_label):
+def phase_average(phase, kymos, filename, y_label, no_bins=15):
 
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
@@ -781,8 +805,8 @@ def phase_average(phase, kymos, filename, y_label):
     phase_shift = []
 
     for k in kymos:
-        bin_mean, bin_edges, bin_std = bin_acc_phase(phase, k.kymo, n_bins=15,
-                                                    norm=False)
+        bin_mean, bin_edges, bin_std = bin_acc_phase(phase, k.kymo,
+                                                    n_bins=no_bins, norm=False)
         bin = bin_edges[:-1] + np.diff(bin_edges)/2
 
 

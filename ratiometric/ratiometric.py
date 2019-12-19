@@ -42,8 +42,10 @@ def process_ratiometric(set):
     texas_clean = np.multiply(texas, mask)
 
 
-    _, green_clean = remove_spots(green_clean, mask, set.spots_radius, set.thresh_spots)
-    _, texas_clean = remove_spots(texas_clean, mask, set.spots_radius, set.thresh_spots)
+    _, green_clean = remove_spots(green_clean, mask, set.spots_radius,
+                                    set.thresh_spots)
+    _, texas_clean = remove_spots(texas_clean, mask, set.spots_radius,
+                                    set.thresh_spots)
 
 
     ### projection method ###

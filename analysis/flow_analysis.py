@@ -111,7 +111,6 @@ def flow_quantification(frame_a, frame_b, mask,
             m = m_windows[i,j][s_min:s_max, s_min:s_max]
 
 
-            # must only contain non masked pixels, alternatively use .any()
             if mask_crit(m):
                 b = b_windows[i,j]
 
