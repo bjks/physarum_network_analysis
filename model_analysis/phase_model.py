@@ -46,7 +46,7 @@ def unique_tol(arr, tol=1e-3):
 
 def phase_model(mat_file):
 
-    times           = (10, None)
+    times           = (300, None)
     positions       = (None, None)
 
 
@@ -62,7 +62,7 @@ def phase_model(mat_file):
     if np.size(t_scaling)>1:
         print('WARNING: time_step not unique up to tolerance')
     else:
-        t_scaling = t_scaling[0]
+        t_scaling = t_scaling[0] * 10
     print('time_step: ', t_scaling)
 
 
@@ -72,9 +72,10 @@ def phase_model(mat_file):
                                         'radius',
                                         t_scaling,
                                         1.0,
-                                        1.0,
+                                        100,
                                         cmap=cmap_r,
                                         align_keyword=None,
+                                        unit=r'$\mu$m',
                                         times=times, positions=positions,
                                         ismat_file=True)
 
@@ -121,7 +122,7 @@ def phase_model(mat_file):
 
     print('Detrending...')
     radii, mass, conce = \
-        [k.detrend(cval=1.0, method = 'const') \
+        [k.detrend(cval=np.mean(k.kymo), method = 'const') \
         for k in [radii, mass, conce]]
 
 
@@ -171,7 +172,7 @@ def phase_model(mat_file):
 
     phase_shift_c = phase_average(phase_radius.kymo,
                                 [radii, conce],
-                                filename, '', no_bins=10)
+                                filename, '', no_bins=20)
 
     upd_out(to_save_dict, ('phase_shift_c', phase_shift_c) )
 

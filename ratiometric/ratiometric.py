@@ -30,7 +30,7 @@ def process_ratiometric(set):
     mask = extract_network(mask, set.extract)
 
     ### skeleton, radii ###
-    skeleton = extract_skeleton(mask, method='skeletonize',
+    skeleton = extract_skeleton(mask, method='medial_axis',
                                 branch_thresh = set.branch_thresh,
                                 extract = set.extract)
 
@@ -54,13 +54,13 @@ def process_ratiometric(set):
         c_inner_green, \
         c_outer_green = inter_mean(green_clean, skeleton, mask, rel_dist,
                                     interval_size=50, div=0.5,
-                                    corr_for_missing_branches = True)
+                                    corr_for_missing_branches = False)
 
         c_texas, \
         c_inner_texas, \
         c_outer_texas = inter_mean(texas_clean, skeleton, mask, rel_dist,
                                     interval_size=50, div=0.5,
-                                    corr_for_missing_branches = True)
+                                    corr_for_missing_branches = False)
 
     # gathering data to create dictionary for np.savez, data is not copied!
     maps = [('set', set),

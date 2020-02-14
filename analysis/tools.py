@@ -8,14 +8,8 @@ def log_message(set, script, *add_args):
     print(log_message, file=open(set.file_log, "a"))
 
 
-def fft_kymo(signal, frame_int):
-
-    kymo_f  = np.fft.rfft(signal)
-
-    freq    = np.fft.rfftfreq(signal.shape[-1]) / frame_int
-    fourier = np.mean(kymo_f.real, axis=0)
-    plt.plot(freq, fourier)
-    plt.show()
+def closest_number(arr, ref):
+    return arr[np.argmin((arr - ref)**2)]
 
 
 def fill_up_array(array, add1, add2):

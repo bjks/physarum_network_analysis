@@ -24,7 +24,7 @@ def invert_bf(image):
     return - image + np.max(image)
 
 ###### visualization tools #####
-def thick_skeleton(skeleton, times = 10):
+def thick_skeleton(skeleton, times = 10, mask=True):
     """ create diluted skeleton and masks the background for plotting """
 
     if times > 0:
@@ -34,7 +34,8 @@ def thick_skeleton(skeleton, times = 10):
     else:
         thick_skeleton = skeleton.copy().astype(float)
 
-    thick_skeleton = np.ma.masked_where(thick_skeleton == 0, thick_skeleton)
+    if mask:
+        thick_skeleton = np.ma.masked_where(thick_skeleton == 0, thick_skeleton)
     return thick_skeleton
 
 
@@ -208,28 +209,36 @@ def extract_skeleton(mask, method='medial_axis', branch_thresh=50, extract=1):
     medial_axis = set_borders_to(medial_axis, value=0)
 
     if branch_thresh > 0:
-        nodes, endpoints = node_detection(medial_axis)
-        seperated_skel = medial_axis - nodes
+        last_medial_axis = medial_axis.copy()
+        while True:
+            nodes, endpoints = node_detection(medial_axis)
+            seperated_skel = medial_axis - nodes
 
-        seper_l, no_l = morph.label(seperated_skel, connectivity=2, return_num=True)
+            seper_l, no_l = morph.label(seperated_skel, connectivity=2, return_num=True)
 
-        # iterate over branches
-        for l in range(1, no_l+1):
-            branch = np.where(seper_l==l, 1, 0)
-            # remove branches that don't connect anything and are shorter than
-            # branch_thresh
-            if remove_branch_crit(branch, endpoints, branch_thresh):
-                medial_axis = np.where(branch==1, 0, medial_axis)
+            # iterate over branches
+            for l in range(1, no_l+1):
+                branch = np.where(seper_l==l, 1, 0)
+                # remove branches that don't connect anything and are shorter than
+                # branch_thresh
+                if remove_branch_crit(branch, endpoints, branch_thresh):
+                    medial_axis = np.where(branch==1, 0, medial_axis)
+                    plt.imshow(medial_axis)
+                    plt.show()
 
-        # add nodes to conncect network again
-        medial_axis = np.logical_or(medial_axis, nodes)
-        # remove nodes that are not longer part of the network
-        medial_axis = morph.remove_small_objects(medial_axis, 6, connectivity=2)
+            # add nodes to conncect network again
+            medial_axis = np.logical_or(medial_axis, nodes)
+            # remove nodes that are not longer part of the network
+            medial_axis = morph.remove_small_objects(medial_axis, 6, connectivity=2)
 
-        # thinning necessary since nodes that lost a branch are wider that 1px
-        medial_axis = morph.skeletonize(medial_axis)
+            # thinning necessary since nodes that lost a branch are wider that 1px
+            medial_axis = morph.skeletonize(medial_axis)
+            medial_axis = extract_network(medial_axis, extract)
+            if np.all(last_medial_axis == medial_axis):
+                break
+            else:
+                last_medial_axis = medial_axis.copy()
 
-    medial_axis = extract_network(medial_axis, extract)
     return medial_axis
 
 
@@ -243,13 +252,13 @@ def extract_radii(mask, skeleton):
 #########################################################################
 ########## replace spots with estim. background, based on nearby pixels #
 
-def disk_filter(dye, mask, r):
+def disk_filter(dye, mask, r, normalize_kernel=True):
     """ disk filter using a disk with radius r masked pixels are ignored """
     dye_filtered = np.where(mask!=0, dye, np.nan) # 0 -> NaN (to be ignored)
 
     kernel = morph.disk(r)
     dye_filtered = convolve_fft(dye_filtered, kernel, fill_value=np.nan,
-                                quiet=True)
+                                quiet=True, normalize_kernel=normalize_kernel)
 
     return np.nan_to_num(dye_filtered) # NaN -> 0
 
@@ -445,7 +454,7 @@ def inter_mean(dye, skeleton, mask, relative_dist,
     # relative_dist, radii = relative_distance(skeleton, mask, local_radii)
 
     inds = ndi.distance_transform_edt(np.invert(skeleton.astype(bool)),
-                                      return_distances=False, return_indices=True)
+                                    return_distances=False, return_indices=True)
 
     dye_f = dye.flatten()
     inds0 = inds[0].flatten()
@@ -465,9 +474,29 @@ def inter_mean(dye, skeleton, mask, relative_dist,
     intensity = intensity_inner + intensity_outer
     no = no_inner + no_outer
 
+    intensity = disk_filter(intensity, skeleton, interval_size,
+                            normalize_kernel=False) * skeleton
+    no = disk_filter(no, skeleton, interval_size,
+                    normalize_kernel=False) * skeleton
+
     concentration = np.true_divide(intensity, no,
                                    out=np.zeros_like(dye),
                                    where=intensity!=0)
+
+    if return_only_conc:
+        return concentration
+
+
+    intensity_inner = disk_filter(intensity_inner, skeleton, interval_size,
+                                    normalize_kernel=False) * skeleton
+    intensity_outer = disk_filter(intensity_outer, skeleton, interval_size,
+                                    normalize_kernel=False) * skeleton
+
+    no_inner = disk_filter(no_inner, skeleton, interval_size,
+                            normalize_kernel=False) * skeleton
+    no_outer = disk_filter(no_outer, skeleton, interval_size,
+                            normalize_kernel=False) * skeleton
+
 
     concentration_inner = np.true_divide(intensity_inner, no_inner,
                                          out=np.zeros_like(dye),
@@ -476,17 +505,6 @@ def inter_mean(dye, skeleton, mask, relative_dist,
     concentration_outer = np.true_divide(intensity_outer, no_outer,
                                          out=np.zeros_like(dye),
                                          where=intensity_outer!=0)
-
-    if return_only_conc:
-        return disk_filter(concentration, skeleton, interval_size) * skeleton
-
-
-    concentration         = disk_filter(concentration,
-                                        skeleton, interval_size) * skeleton
-    concentration_inner   = disk_filter(concentration_inner,
-                                        skeleton, interval_size) * skeleton
-    concentration_outer   = disk_filter(concentration_outer,
-                                        skeleton, interval_size) * skeleton
 
 
     return  concentration, \

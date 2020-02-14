@@ -7,6 +7,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib import cm
 from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 from matplotlib import rc
+# from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
+#                                AutoMinorLocator)
 # rc('text', usetex=True)
 
 from scipy import ndimage as ndi
@@ -488,7 +490,9 @@ def plot_time_series(kymos, path=None, filename=None, window_size=10,
 
         ax.set_xlim(0, timestamps[-1])
         ax.set_ylabel(kymo.name)
-        ax.grid(True, axis='x')
+        # ax.xaxis.set_minor_locator(mpl.ticker.MultipleLocator(np.diff(ax.get_xtickslabels())[0]/5))
+        ax.xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator())
+        ax.grid(True, axis='x', which='both')
 
         if not i==no_kymos-1:
             ax.set_xticklabels([])
@@ -708,7 +712,7 @@ def uni_filter_circular(arr, size_tuple):
 
 
 
-def phase_shift2d(phase1, phase2, filename, t_window_in_s=400):
+def phase_shift2d(phase1, phase2, filename, t_window_in_s=300):
 
     shift = phase1.kymo - phase2.kymo
 
@@ -716,7 +720,7 @@ def phase_shift2d(phase1, phase2, filename, t_window_in_s=400):
     shift = (shift + np.pi) % (2*np.pi) - np.pi
 
     #
-    footprint = (50, int(t_window_in_s/phase1.t_scaling))
+    footprint = (20, int(t_window_in_s/phase1.t_scaling))
     avg_shift = uni_filter_circular(shift, footprint)
 
 
@@ -729,10 +733,10 @@ def phase_shift2d(phase1, phase2, filename, t_window_in_s=400):
     ax[0].set_title('phase shift')
     ax[0].set_ylabel('space (pixel)')
 
-    ax[1].set_title('phase shift (uniform filter(x,t(s)): '+ \
-                    str(footprint[0]) + ', ' + \
+    ax[1].set_title('phase shift, uniform filter: '+ \
+                    str(footprint[0]) + ' pixels, ' + \
                     str(np.around(footprint[1]*phase1.t_scaling)) + \
-                    ')')
+                    ' s')
 
     ax[1].set_xlabel('time (s)')
     ax[1].set_ylabel('space (pixel)')
@@ -815,11 +819,15 @@ def phase_average(phase, kymos, filename, y_label, no_bins=15):
 
         if k == kymos[0]:
             axis = ax1
+            lab_text = k.get_title(0)
         else:
             axis = ax2
+            # lab_text = k.get_title(0)
+            lab_text = k.get_title(0) + ', shift: ' + \
+                        str( np.around(popt[-1], decimals=2) )
 
-        axis.plot(bin, bin_mean , label=k.get_title(0) + ', shift: ' +
-                    str( np.around(popt[-1], decimals=3) ), color=k.color)
+
+        axis.plot(bin, bin_mean, label=lab_text, color=k.color)
 
         # plt.fill_between(bin, bin_mean - bin_std, bin_mean + bin_std,
         #                      alpha=0.2, color=k.color)
@@ -830,8 +838,8 @@ def phase_average(phase, kymos, filename, y_label, no_bins=15):
         axis.plot(phase_sample, sin_func(phase_sample, *popt), '--',
                     color=k.color)
 
-        y1 = sin_func(phase_sample, popt[0], popt[1] + pcov[1,1]**0.5)
-        y2 = sin_func(phase_sample, popt[0], popt[1] - pcov[1,1]**0.5)
+        # y1 = sin_func(phase_sample, popt[0], popt[1] + pcov[1,1]**0.5)
+        # y2 = sin_func(phase_sample, popt[0], popt[1] - pcov[1,1]**0.5)
         # plt.fill_between(phase_sample, y1, y2, color=k.color, alpha=0.15)
 
         axis.axvline(x=popt[-1], linewidth=1, color=k.color)
@@ -842,8 +850,13 @@ def phase_average(phase, kymos, filename, y_label, no_bins=15):
     ax2.set_ylabel(y_label)
 
     ax1.set_xlabel('phase')
-    ax2.legend()
+    # ax2.legend()
+    ticks = np.array([-np.pi, -np.pi/2, 0, np.pi/2 ,np.pi])
+    labels = [r'$-\pi$',r'$-\pi/2$', '0', r'$\pi/2$', r'$\pi$']
+    ax1.set_xticks(ticks)
+    ax1.set_xticklabels(labels)
 
+    fig.legend(bbox_to_anchor=(0.5, 1.01), loc='lower center')
 
     plt.savefig(filename +'_'+ y_label + '_phase.pdf', dpi=400,
                 bbox_inches='tight')

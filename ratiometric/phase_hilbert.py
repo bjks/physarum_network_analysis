@@ -44,7 +44,7 @@ def process_phase(set, label):
     max_period      = 140
     min_frequency   = 1./max_period
 
-    bandwidth      = np.array([-0.002, 0.002])
+    bandwidth      = np.array([-0.005, 0.005])
     cmap_r          = 'viridis'
     cmap_c          = 'cividis'
 
@@ -58,6 +58,7 @@ def process_phase(set, label):
         path_name = branch_plotpath(set, label)
 
         filename = path_name + '/branch_' + str(label) + '_'
+        plot_branch(kymos_data['branch_map'], label, filename, set.pixel_scaling, set.file_raw1)
 
         to_save_dict = dict()
         ##################################################################
@@ -162,12 +163,9 @@ def process_phase(set, label):
             plot_kymograph([flow_x, flow_y], filename)
 
 
-
-
-
-        ##################################################################
-        #################### Norm. concentration #########################
-        ##################################################################
+        # ==================================================================== #
+        # Norm. concentration
+        # ==================================================================== #
         radii = radii.shift(set.symm_setup, 'orange')
 
         conce = kymograph.ca_concentration(kymo_c_green, kymo_c_texas,
@@ -215,22 +213,27 @@ def process_phase(set, label):
         upd_out(to_save_dict, ('band_f1', band_f1), ('band_f2', band_f2) )
 
         dom_freq_in_t = spectro(radii, filename, logscale=True,
-                                window_size_in_s=300, overlap=2)
+                                window_size_in_s=400, overlap=2)
 
         # radii_adapt = radii.adaptive_bandpass(dom_freq_in_t, bandwidth)
         # plot_kymograph([radii_adapt], filename)
 
         print('Detrending...')
-        radii, conce, inner, outer = \
-            [k.detrend(tsig1=200, tsig2=20, psig1=1, psig2=5,
+        radii_d, conce_d, inner_d, outer_d = \
+            [k.detrend(tsig1=200, tsig2=10, psig1=1, psig2=5,
             method = 'gauss') for k in [radii, conce, inner, outer]]
+        ## or:
+        radii_b, conce_b, inner_b, outer_b = \
+            [k.bandpass(band_f1, band_f2) for k in [radii, conce, inner, outer]]
 
-        plot_kymograph_series([radii, conce], filename)
+        plot_kymograph_series([radii_d, conce_d], filename)
+        plot_kymograph_series([radii_b, conce_b], filename)
 
-        plot_kymograph([radii, conce, inner, outer], filename)
+        plot_kymograph([radii_b, conce_b, inner_b, outer_b], filename)
+        plot_kymograph([radii_d, conce_d, inner_d, outer_d], filename)
 
         print("Time shift map...")
-        time_shift_map = time_shift2d(radii, conce, filename, upsample_t=10,
+        time_shift_map = time_shift2d(radii_d, conce_d, filename, upsample_t=10,
                             window_size_in_s=2./freq_r,
                             t_sampling_in_s=2/freq_r,
                             x_sampling=100, search_range_in_s=1./freq_r,
@@ -242,12 +245,13 @@ def process_phase(set, label):
         ##################################################################
         ################# calc phase of oscillation ######################
         ##################################################################
-        print('Phase...')
-        phase_radius, amp_radius, freq_radius, car_radius = radii.kymo_hilbert()
-        phase_conce,  amp_conce, freq_conce, car_conce = conce.kymo_hilbert()
+        print('Hilbert...')
+        phase_radius, amp_radius, freq_radius, car_radius = radii_b.kymo_hilbert()
+        phase_conce,  amp_conce, freq_conce, car_conce = conce_b.kymo_hilbert()
 
         phase_shift_map = phase_shift2d(phase_radius, phase_conce, filename)
 
+        plot_kymograph([phase_radius], filename)
 
         plot_kymograph_series([radii, phase_radius, amp_radius, car_radius],
                                 filename,
@@ -260,13 +264,12 @@ def process_phase(set, label):
         ############ bandpass kymograph before binning ##################
         ######################## Phase dependence ########################
         ##################################################################
-
+        print('Phase...')
         phase_shift_c = phase_average(phase_radius.kymo,
-                                    [radii, conce, inner, outer],
-                                    filename, 'concentration')
+                                    [radii_b, conce_b, inner_b, outer_b],
+                                    filename, 'concentration', no_bins=20)
 
         upd_out(to_save_dict, ('phase_shift_c', phase_shift_c) )
-
 
         if set.analyse_flow:
             flow_x_b = flow_x.bandpass(band_f1, band_f2)
@@ -284,22 +287,22 @@ def process_phase(set, label):
         ##################################################################
         ######################### correlations ###########################
         ##################################################################
-        corr_shift_c = correlation_shift(radii, conce, filename, 'kymos',
+        print('Correlation_shift...')
+        corr_shift_c = correlation_shift(radii_d, conce_d, filename, 'kymos',
                                 upsample_t=2, upsample_x=1,
                                 search_range_in_s=1./freq_r,
-                                detrend='gauss')
+                                detrend=None)
 
         upd_out(to_save_dict, ('corr_shift_c', corr_shift_c) )
 
 
-
-
         if set.analyse_flow:
-            corr_shift_f = correlation_shift(conce, flow_y, filename,
+            flow_y_d = flow_y.detrend(tsig1=200, tsig2=10, psig1=1, psig2=5, method = None)
+            corr_shift_f = correlation_shift(conce_d, flow_y_d, filename,
                                 'flow-concentartion',
                                 upsample_t=10, upsample_x=1,
                                 search_range_in_s=1./freq_r,
-                                detrend='gauss')
+                                detrend=None)
 
             upd_out(to_save_dict, ('corr_shift_f', corr_shift_f) )
 
