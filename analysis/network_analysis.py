@@ -210,6 +210,8 @@ def extract_skeleton(mask, method='medial_axis', branch_thresh=50, extract=1):
     medial_axis = inverse_reflect_boundaries(medial_axis)
     medial_axis = set_borders_to(medial_axis, value=0)
 
+    medial_axis = morph.remove_small_holes(medial_axis, area_threshold=2) # fills single pixel holes in medial_axis
+
     if branch_thresh > 0:
         last_medial_axis = medial_axis.copy()
         while True:
@@ -226,8 +228,6 @@ def extract_skeleton(mask, method='medial_axis', branch_thresh=50, extract=1):
                 # branch_thresh
                 if remove_branch_crit(branch, endpoints, branch_thresh):
                     medial_axis = np.where(branch==1, 0, medial_axis)
-                    plt.imshow(medial_axis)
-                    plt.show()
 
             # add nodes to conncect network again
             medial_axis = np.logical_or(medial_axis, nodes)
@@ -239,6 +239,7 @@ def extract_skeleton(mask, method='medial_axis', branch_thresh=50, extract=1):
             medial_axis = morph.skeletonize(medial_axis)
             medial_axis = extract_network(medial_axis, extract)
             if np.all(last_medial_axis == medial_axis):
+                medial_axis = last_medial_axis
                 break
             else:
                 last_medial_axis = medial_axis.copy()
