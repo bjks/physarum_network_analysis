@@ -119,7 +119,8 @@ def flow_quantification(frame_a, frame_b, mask,
                 if np.max(corr) > corr_tresh and np.any(a):
 
                     corr_shape = corr.shape
-                    shift = np.unravel_index(np.argmax(corr, axis=None), corr_shape)
+                    shift = np.unravel_index(np.argmax(corr, axis=None),
+                                            corr_shape)
 
                     flow_field_x[i,j] = shift[1] - int(corr_shape[1]/2)
                     flow_field_y[i,j] = shift[0] - int(corr_shape[0]/2)

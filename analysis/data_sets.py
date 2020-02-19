@@ -48,6 +48,8 @@ class data_paths:
 
         core = image_prefix + str(no).zfill(zeros)
 
+
+        #### Bright field ####
         if bf != None:
             bf = [x.strip() for x in bf.split()]
             if np.size(bf)>1:
@@ -56,11 +58,19 @@ class data_paths:
                 self.file_raw = dir_raw + core + bf[0] + '.tif'
             else:
                 self.file_raw = dir_raw + core + '.tif'
+        else:
+            self.file_raw = None
 
+        #### Green/Red channels ####
         if green != None:
-            self.file_raw1      = dir_raw + core + green + '.tif'
+            self.file_raw1v= dir_raw + core + green + '.tif'
+        else:
+            self.file_raw1 = None
+
         if texas != None:
-            self.file_raw2      = dir_raw + core + texas + '.tif'
+            self.file_raw2 = dir_raw + core + texas + '.tif'
+        else:
+            self.file_raw2 = None
 
 
         self.path_results   = dir_results + dir + '/'

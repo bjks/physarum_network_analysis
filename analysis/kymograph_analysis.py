@@ -106,7 +106,7 @@ class kymograph:
 
     def get_title(self, for_file_name=True):
         if for_file_name:
-            return self.name.replace(' ', '') + '(' + self.state.replace(' ', '') + ')'
+            return self.name.replace(' ', '')+'(' + self.state.replace(' ', '')+')'
 
         else:
             if self.state == 'raw':
@@ -329,7 +329,8 @@ def plot_kymograph_series(kymo_list, filename, lim_modes='min'):
 
     plt.subplots_adjust(hspace=0.7)
 
-    plt.savefig(filename + kymo_list[0].state + ''.join([k.name for k in kymo_list]) + '.pdf',
+    plt.savefig(filename + kymo_list[0].state + \
+                ''.join([k.name for k in kymo_list]) + '.pdf',
                 dpi=400, bbox_inches='tight')
     plt.close()
 
@@ -365,10 +366,11 @@ def plot_kymograph(kymo_list, filename, lim_modes='minmax'):
         ax.set_xlabel('time (s)')
 
         divider = make_axes_locatable(ax)
-        fig.colorbar(im, cax = divider.append_axes('right', size='5%', pad=0.05),
-                     orientation='vertical')
+        fig.colorbar(im, cax = divider.append_axes('right', size='5%',
+                    pad=0.05), orientation='vertical')
 
-        plt.savefig(filename + kymo.get_title() + '.pdf', dpi=400, bbox_inches='tight')
+        plt.savefig(filename + kymo.get_title() + '.pdf', dpi=400,
+                    bbox_inches='tight')
         plt.close()
 
 
@@ -380,13 +382,14 @@ def butter_bandpass(data, lowcut, highcut, fs, order):
 
 
     if lowcut==0 or lowcut==None:
-        sos = signal.butter(order, highcut,  fs=fs, output='sos', btype='lowpass')
+        sos = signal.butter(order, highcut,  fs=fs, output='sos',
+                            btype='lowpass')
 
     elif highcut==0 or highcut==None:
-        sos = signal.butter(order, lowcut,  fs=fs, output='sos', btype='highpass')
+        sos = signal.butter(order, lowcut,  fs=fs, output='sos',
+                            btype='highpass')
 
     else:
-
         sos = signal.butter(order, [lowcut, highcut], fs=fs, output='sos',
                             btype='bandpass')
 
@@ -405,7 +408,8 @@ def butter_bandpass2d(data2d, lowcut, highcut, fs, order):
 
 
 
-def adaptive_butter_2d(data2d, fs, dom_freq, bandwidth, order, min_lowcut=0.001):
+def adaptive_butter_2d(data2d, fs, dom_freq, bandwidth, order,
+                        min_lowcut=0.001):
 
     band_centers = np.unique(dom_freq)
 
@@ -505,8 +509,8 @@ def plot_time_series(kymos, path=None, filename=None, window_size=10,
 
         no_coords = path.shape[0]
 
-        ax.scatter(path[:,1], path[:,0], c=range(no_coords), vmin=0, vmax=no_coords,
-                    cmap='plasma')
+        ax.scatter(path[:,1], path[:,0], c=range(no_coords), vmin=0,
+                    vmax=no_coords, cmap='plasma')
 
         ax.axis('equal')
         ax.invert_yaxis()
@@ -541,8 +545,8 @@ def dominant_freq(kymo, lowcut=0.05, max_period=None):
 
 
 
-def power_spec(kymo, filename, min_frequency, lowcut=0.005, highcut=0.05, band=None,
-                logscale=False):
+def power_spec(kymo, filename, min_frequency, lowcut=0.005, highcut=0.05,
+                band=None, logscale=False):
 
     f, Pxx_den_full = signal.periodogram(kymo.kymo, fs=1./kymo.t_scaling,
                                 scaling='spectrum')
@@ -957,10 +961,10 @@ def time_shift2d(kymo_a, kymo_b, filename, upsample_t=1, window_size_in_s=200,
         kymo1.kymo = gauss_detrend(kymo1.kymo, sigma_gauss)
         kymo2.kymo = gauss_detrend(kymo2.kymo, sigma_gauss)
 
-    window_size     = np.around(window_size_in_s/kymo1.t_scaling).astype(int)
-    search_extend   = np.around(search_range_in_s/(2. * kymo1.t_scaling)).astype(int)
-    t_sampling      = np.around(t_sampling_in_s/ kymo1.t_scaling ).astype(int)
-    x_sampling      = np.min([x_sampling, kymo1.kymo.shape[0]])
+    window_size = np.around(window_size_in_s/kymo1.t_scaling).astype(int)
+    search_extend = np.around(search_range_in_s/(2.*kymo1.t_scaling)).astype(int)
+    t_sampling = np.around(t_sampling_in_s/ kymo1.t_scaling ).astype(int)
+    x_sampling = np.min([x_sampling, kymo1.kymo.shape[0]])
 
     s_min = search_extend * upsample_t
     s_max = -search_extend * upsample_t

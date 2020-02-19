@@ -107,8 +107,10 @@ def interpl_masks(mask1, mask2):
     mask1 = mask1.astype(bool)
     mask2 = mask2.astype(bool)
 
-    d1 = -ndi.distance_transform_edt(mask1) + ndi.distance_transform_edt(np.invert(mask1))
-    d2 = -ndi.distance_transform_edt(mask2) + ndi.distance_transform_edt(np.invert(mask2))
+    d1 = -ndi.distance_transform_edt(mask1) + \
+            ndi.distance_transform_edt(np.invert(mask1))
+    d2 = -ndi.distance_transform_edt(mask2) + \
+            ndi.distance_transform_edt(np.invert(mask2))
 
     d = np.mean([d1, d2], axis=0)
     new_mask = np.where(d < 0, 1, 0)
@@ -214,7 +216,8 @@ def extract_skeleton(mask, method='medial_axis', branch_thresh=50, extract=1):
             nodes, endpoints = node_detection(medial_axis)
             seperated_skel = medial_axis - nodes
 
-            seper_l, no_l = morph.label(seperated_skel, connectivity=2, return_num=True)
+            seper_l, no_l = morph.label(seperated_skel, connectivity=2,
+                                        return_num=True)
 
             # iterate over branches
             for l in range(1, no_l+1):
@@ -229,7 +232,8 @@ def extract_skeleton(mask, method='medial_axis', branch_thresh=50, extract=1):
             # add nodes to conncect network again
             medial_axis = np.logical_or(medial_axis, nodes)
             # remove nodes that are not longer part of the network
-            medial_axis = morph.remove_small_objects(medial_axis, 6, connectivity=2)
+            medial_axis = morph.remove_small_objects(medial_axis, 6,
+                                                    connectivity=2)
 
             # thinning necessary since nodes that lost a branch are wider that 1px
             medial_axis = morph.skeletonize(medial_axis)
@@ -297,31 +301,36 @@ def estimate_background(dye, mask, halo_sig):
 
 
 def background_correction(dye, file_raw, sigma, lower_thresh, halo_sig):
+    if bf !=None:
+        if np.size(file_raw)>1:
+            file_raw = file_raw[0]
 
+        bf          = read_file(file_raw)
 
-    if np.size(file_raw)>1:
-        file_raw = file_raw[0]
+        mask_bf     = create_mask(invert_bf(bf), sigma, lower_thresh, halo_sig)
 
-    bf          = read_file(file_raw)
+        # estimate background of bf and dye
+        back_bf     = estimate_background(bf, mask_bf, halo_sig)
+        back_dye    = estimate_background(dye, mask_bf, halo_sig)
 
-    mask_bf     = create_mask(invert_bf(bf), sigma, lower_thresh, halo_sig)
+        # based on the assumption:
+        # background (ligth below tube) / background that reaches the cam is constant
+        # ie not dependend on the intensity and the wavelength
+        # -> I_b,bf / I^0_b,bf * I^0_b, green = I_b,green
+        added_back  = calc_ratio(bf, back_bf) * back_dye
 
-    # estimate background of bf and dye
-    back_bf     = estimate_background(bf, mask_bf, halo_sig)
-    back_dye    = estimate_background(dye, mask_bf, halo_sig)
+        # tube signal = signal - background contribution
+        corrected_dye = dye - added_back
+        # necessary, otherwise negative values mess with mask
+        # (not problematic, since it only concerns pixel outside network)
+        return np.where(corrected_dye < 0, 0, corrected_dye)
 
-    # based on the assumption:
-    # background (ligth below tube) / background that reaches the cam is constant
-    # ie not dependend on the intensity and the wavelength
-    # -> I_b,bf / I^0_b,bf * I^0_b, green = I_b,green
-    added_back  = calc_ratio(bf, back_bf) * back_dye
+    else:
+        mask_back = create_mask(dye, sigma, lower_thresh, halo_sig)
+        mask_back = np.where(mask_back!=0, mask_back, np.nan) # 0 -> nan
+        corrected_dye = dye - np.nanmean(mask_back)
+        return np.where(corrected_dye < 0, 0, corrected_dye)
 
-
-    # tube signal = signal - background contribution
-    corrected_dye = dye - added_back
-    # necessary, otherwise negative values mess with mask
-    # (not problematic, since it only concerns pixel outside network)
-    return np.where(corrected_dye < 0, 0, corrected_dye)
 
 #####################################
 ############ ratio calc #############
@@ -414,7 +423,8 @@ def project_on_skeleton(dye, skeleton):
 
 
     dist, inds = ndi.distance_transform_edt(np.invert(skeleton.astype(bool)),
-                                      return_distances=True, return_indices=True)
+                                            return_distances=True,
+                                            return_indices=True)
 
     dye_f = dye.flatten()
     inds0 = inds[0].flatten()
