@@ -301,7 +301,7 @@ def estimate_background(dye, mask, halo_sig):
 
 
 def background_correction(dye, file_raw, sigma, lower_thresh, halo_sig):
-    if bf !=None:
+    if file_raw !=None:
         if np.size(file_raw)>1:
             file_raw = file_raw[0]
 
@@ -321,16 +321,18 @@ def background_correction(dye, file_raw, sigma, lower_thresh, halo_sig):
 
         # tube signal = signal - background contribution
         corrected_dye = dye - added_back
-        # necessary, otherwise negative values mess with mask
-        # (not problematic, since it only concerns pixel outside network)
-        return np.where(corrected_dye < 0, 0, corrected_dye)
 
     else:
         mask_back = create_mask(dye, sigma, lower_thresh, halo_sig)
-        mask_back = np.where(mask_back!=0, mask_back, np.nan) # 0 -> nan
-        corrected_dye = dye - np.nanmean(mask_back)
-        return np.where(corrected_dye < 0, 0, corrected_dye)
+        background = np.where(mask_back==0, dye, 0)
 
+        background = np.where(background!=0, background, np.nan) # 0 -> nan
+        corrected_dye = dye - np.nanmean(background)
+
+
+    # necessary, otherwise negative values mess with mask
+    # (not problematic, since it only concerns pixel outside network)
+    return np.where(corrected_dye < 0, 0, corrected_dye)
 
 #####################################
 ############ ratio calc #############

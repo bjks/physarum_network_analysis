@@ -63,7 +63,7 @@ class data_paths:
 
         #### Green/Red channels ####
         if green != None:
-            self.file_raw1v= dir_raw + core + green + '.tif'
+            self.file_raw1 = dir_raw + core + green + '.tif'
         else:
             self.file_raw1 = None
 
