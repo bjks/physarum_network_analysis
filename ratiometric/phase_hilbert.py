@@ -53,12 +53,13 @@ def process_phase(set, label):
     if not os.path.isfile(data_file):
         print("\nNOTE: ", data_file, " not found!\n")
     else:
-        print("Analyze: ", data_file)
+        print("\nAnalyze: ", data_file)
         kymos_data = np.load(data_file)
         path_name = branch_plotpath(set, label)
 
         filename = path_name + '/branch_' + str(label) + '_'
-        plot_branch(kymos_data['branch_map'], label, filename, set.pixel_scaling, set.file_raw1)
+        plot_branch(kymos_data['branch_map'], label, filename,
+                    set.pixel_scaling, set.file_raw1)
 
         to_save_dict = dict()
         ##################################################################
@@ -246,8 +247,8 @@ def process_phase(set, label):
         ################# calc phase of oscillation ######################
         ##################################################################
         print('Hilbert...')
-        phase_radius, amp_radius, freq_radius, car_radius = radii_b.kymo_hilbert()
-        phase_conce,  amp_conce, freq_conce, car_conce = conce_b.kymo_hilbert()
+        phase_radius, amp_radius, f_radius, car_radius = radii_b.kymo_hilbert()
+        phase_conce,  amp_conce, f_conce, car_conce = conce_b.kymo_hilbert()
 
         phase_shift_map = phase_shift2d(phase_radius, phase_conce, filename)
 
@@ -297,7 +298,8 @@ def process_phase(set, label):
 
 
         if set.analyse_flow:
-            flow_y_d = flow_y.detrend(tsig1=200, tsig2=10, psig1=1, psig2=5, method = None)
+            flow_y_d = flow_y.detrend(tsig1=200, tsig2=10, psig1=1, psig2=5,
+                                    method = None)
             corr_shift_f = correlation_shift(conce_d, flow_y_d, filename,
                                 'flow-concentartion',
                                 upsample_t=10, upsample_x=1,
@@ -311,8 +313,10 @@ def process_phase(set, label):
         ######################### Save in txt ############################
         ##################################################################
 
-        np.savez_compressed(branch_datfile(set, label, ext='_phase'), **to_save_dict)
-
+        np.savez_compressed(branch_datfile(set, label, ext='_phase')
+                                            , **to_save_dict)
+                                            
+        print('Saved npz \n')
 
 
 
@@ -322,7 +326,6 @@ def main():
 
     set             = data(set_keyword, no=data(set_keyword).first,
                             method='inter_mean', color='sep')
-
 
     if len(os.sys.argv)>2:
         label =  int(os.sys.argv[2])

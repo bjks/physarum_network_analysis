@@ -1,18 +1,9 @@
 find . -type f -name "*_tg*" -delete
 
-
+------ RESULTS ------
 rsync -rav -e ssh --include '*/' --exclude='*_t*' bksche@10.217.100.61:/data.bpm/bksche/results ~/image_analysis/
 rsync -rav -e ssh --include '*/' --exclude='*_t*' bksche@10.216.1.1:/data.bpm/bksche/results ~/image_analysis/
 rsync -rav -e ssh  --exclude='*' --include '*/' --include '*001_inter_mean*' bksche@10.216.1.1:/data.bpm/bksche/results ~/image_analysis/
-
------- KYMOS ------
-rsync -azP --dry-run bksche@10.216.1.1:/data.bpm/bksche/results --include '*/' --include 'set*' --exclude '*' Documents/image_analysis/
-rsync -azP --dry-run bksche@10.216.2.1:/data.bpm/bksche/results --include '*/' --include 'set*' --exclude '*' Documents/image_analysis/
-
-rsync -azP bksche@10.216.1.1:/data.bpm/bksche/results --include '*/' --include 'set*' --exclude '*' Documents/image_analysis/
-rsync -azP bksche@10.216.2.1:/data.bpm/bksche/results --include '*/' --include 'set*' --exclude '*' Documents/image_analysis/
-rsync -azP bksche@10.217.100.61:/data.bpm/bksche/results --include '*/' --include 'set*' --exclude '*' Documents/image_analysis/
-
 
 ------ MP4s ------
 rsync -azP bksche@10.216.1.1:/data.bpm/bksche/plots --include '*/' --include '*.mp4' --exclude '*' Documents/image_analysis/

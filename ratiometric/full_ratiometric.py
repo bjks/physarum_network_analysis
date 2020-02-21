@@ -15,7 +15,7 @@ NO_SLICES   = int(os.sys.argv[2])
 COLOR       = 'sep'
 MAX_FRAME   = 200
 SKIP        = False
-IGNORE_CONV = True      # ignore running czi converters
+IGNORE_CONV = False      # ignore running czi converters
 ############################################
 ############################################
 

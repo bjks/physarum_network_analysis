@@ -106,7 +106,8 @@ class kymograph:
 
     def get_title(self, for_file_name=True):
         if for_file_name:
-            return self.name.replace(' ', '')+'(' + self.state.replace(' ', '')+')'
+            return self.name.replace(' ', '') + '(' + \
+                    self.state.replace(' ', '')+')'
 
         else:
             if self.state == 'raw':
@@ -229,7 +230,8 @@ class kymograph:
         phase.cmap = 'twilight_shifted'
         phase.unit = 'rad'
 
-        instantaneous_frequency = np.diff(np.unwrap(instantaneous_phase))/(2.0*np.pi)*kymo_b.t_scaling
+        f_scal = 2*np.pi * kymo_b.t_scaling
+        instantaneous_frequency = np.diff(np.unwrap(instantaneous_phase))/f_scal
         freq = self.copy_meta(instantaneous_frequency)
         freq.state = 'freq'
         freq.cmap = 'cool'
@@ -490,11 +492,9 @@ def plot_time_series(kymos, path=None, filename=None, window_size=10,
             peak_inds, _ = signal.find_peaks(t_s, width=5, distance=min_p_dist)
 
             im = ax.plot(timestamps, t_s, c=cmap.to_rgba(p))
-            # ax.plot(timestamps[peak_inds], t_s[peak_inds],"x", c=cmap.to_rgba(p))
 
         ax.set_xlim(0, timestamps[-1])
         ax.set_ylabel(kymo.name)
-        # ax.xaxis.set_minor_locator(mpl.ticker.MultipleLocator(np.diff(ax.get_xtickslabels())[0]/5))
         ax.xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator())
         ax.grid(True, axis='x', which='both')
 
@@ -860,7 +860,7 @@ def phase_average(phase, kymos, filename, y_label, no_bins=15):
     ax1.set_xticks(ticks)
     ax1.set_xticklabels(labels)
 
-    fig.legend(bbox_to_anchor=(0.5, 1.01), loc='lower center')
+    fig.legend(bbox_to_anchor=(0.5, 0.9), loc='lower center')
 
     plt.savefig(filename +'_'+ y_label + '_phase.pdf', dpi=400,
                 bbox_inches='tight')

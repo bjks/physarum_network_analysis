@@ -34,7 +34,6 @@ def process_ratiometric(set):
                                 branch_thresh = set.branch_thresh,
                                 extract = set.extract)
 
-
     local_radii         = extract_radii(mask, skeleton)
     rel_dist, radii_map = relative_distance(skeleton, mask, local_radii)
 
@@ -54,13 +53,13 @@ def process_ratiometric(set):
     c_inner_green, \
     c_outer_green = inter_mean(green_clean, skeleton, mask, rel_dist,
                                 interval_size=50, div=0.5,
-                                corr_for_missing_branches = False)
+                                corr_for_missing_branches = True)
 
     c_texas, \
     c_inner_texas, \
     c_outer_texas = inter_mean(texas_clean, skeleton, mask, rel_dist,
                                 interval_size=50, div=0.5,
-                                corr_for_missing_branches = False)
+                                corr_for_missing_branches = True)
 
     # gathering data to create dictionary for np.savez, data is not copied!
     maps = [('set', set),

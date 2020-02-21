@@ -39,12 +39,14 @@ def thick_skeleton(skeleton, times = 10, mask=True):
     return thick_skeleton
 
 
-def show_im(image, skel=False):
+def show_im(image, skel=False, times=10, title=None):
     plt.close()
     if skel:
-        plt.imshow(thick_skeleton(image))
+        plt.imshow(thick_skeleton(image.astype(float), times))
     else:
-        plt.imshow(image)
+        plt.imshow(image.astype(float))
+    if title != None:
+        plt.title(title)
     plt.colorbar()
     plt.show()
     plt.close()
@@ -154,15 +156,45 @@ def node_detection(bitmap):
     return nodes, endpoints
 
 
-def remove_branch_crit(branch, endpoints, branch_thresh):
-    """ checks critiria if branch should be removed:
-    1. lenghts < branch_thresh
-    2. contains endpoints (i.e. does not connect anything)
+def remove_branches(medial_axis, branch_thresh, extract):
+    """ removes the shortest paths, fulfilling:
+    lenghts < branch_thresh
+    do not split the network
     """
-    if np.max(branch + endpoints) > 1 and np.sum(branch) < branch_thresh:
-        return True
-    else:
-        return False
+    nodes, endpoints = node_detection(medial_axis)
+    seperated = medial_axis - nodes
+
+    seper_l, no_l = morph.label(seperated, connectivity=2,
+                                return_num=True)
+
+    labels = np.arange(1,no_l+1)
+    # sort by lenght
+    lenghts = [ np.sum(np.where(seper_l==l, 1, 0)) for l in labels]
+
+    labels = labels[np.argsort(lenghts)]
+
+    for l in labels:
+        branch = np.where(seper_l==l, 1, 0)
+
+        # remove branches that don't connect anything and are shorter than
+        # branch_thresh
+        if np.sum(branch) < branch_thresh:
+            # remove the branch testwise:
+            test = np.where(branch==1, 0, medial_axis)
+
+            # add nodes to conncect network again
+            test = np.logical_or(test, nodes)
+
+            # remove nodes that are not longer part of the network
+            test = morph.remove_small_objects(test, 6, connectivity=2)
+
+            _, no_obj = morph.label(test, connectivity=2, return_num=True)
+            if no_obj == extract:
+                medial_axis = test
+                break
+
+    return medial_axis
+
 
 def set_borders_to(arr, value=0):
     new_array = arr.copy()
@@ -183,7 +215,7 @@ def inverse_reflect_boundaries(arr):
 
 
 def extract_skeleton(mask, method='medial_axis', branch_thresh=50, extract=1):
-    """ creates skeleton of bool-like image, removes small branches
+    """ returns skeleton of bool-like image, removes small branches
     (smaller than branch_thresh)
 
     method = 'medial_axis':
@@ -210,41 +242,22 @@ def extract_skeleton(mask, method='medial_axis', branch_thresh=50, extract=1):
     medial_axis = inverse_reflect_boundaries(medial_axis)
     medial_axis = set_borders_to(medial_axis, value=0)
 
-    medial_axis = morph.remove_small_holes(medial_axis, area_threshold=2) # fills single pixel holes in medial_axis
+    # fills single pixel holes in medial_axis
+    medial_axis = morph.remove_small_holes(medial_axis, area_threshold=2)
+    # ... and shrink areas afterwards
+    medial_axis = morph.skeletonize(medial_axis)
 
     if branch_thresh > 0:
         last_medial_axis = medial_axis.copy()
         while True:
-            nodes, endpoints = node_detection(medial_axis)
-            seperated_skel = medial_axis - nodes
+            medial_axis = remove_branches(medial_axis, branch_thresh, extract)
 
-            seper_l, no_l = morph.label(seperated_skel, connectivity=2,
-                                        return_num=True)
-
-            # iterate over branches
-            for l in range(1, no_l+1):
-                branch = np.where(seper_l==l, 1, 0)
-                # remove branches that don't connect anything and are shorter than
-                # branch_thresh
-                if remove_branch_crit(branch, endpoints, branch_thresh):
-                    medial_axis = np.where(branch==1, 0, medial_axis)
-
-            # add nodes to conncect network again
-            medial_axis = np.logical_or(medial_axis, nodes)
-            # remove nodes that are not longer part of the network
-            medial_axis = morph.remove_small_objects(medial_axis, 6,
-                                                    connectivity=2)
-
-            # thinning necessary since nodes that lost a branch are wider that 1px
-            medial_axis = morph.skeletonize(medial_axis)
-            medial_axis = extract_network(medial_axis, extract)
             if np.all(last_medial_axis == medial_axis):
-                medial_axis = last_medial_axis
                 break
             else:
                 last_medial_axis = medial_axis.copy()
 
-    return medial_axis
+    return medial_axis.astype(int)
 
 
 def extract_radii(mask, skeleton):
@@ -315,7 +328,7 @@ def background_correction(dye, file_raw, sigma, lower_thresh, halo_sig):
         back_dye    = estimate_background(dye, mask_bf, halo_sig)
 
         # based on the assumption:
-        # background (ligth below tube) / background that reaches the cam is constant
+        # background (ligth below tube) / background reaching the cam constant
         # ie not dependend on the intensity and the wavelength
         # -> I_b,bf / I^0_b,bf * I^0_b, green = I_b,green
         added_back  = calc_ratio(bf, back_bf) * back_dye
