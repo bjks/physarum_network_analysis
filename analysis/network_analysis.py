@@ -247,6 +247,7 @@ def extract_skeleton(mask, method='medial_axis', branch_thresh=50, extract=1):
     # ... and shrink areas afterwards
     medial_axis = morph.skeletonize(medial_axis)
 
+    show_im(medial_axis, skel=True)
     if branch_thresh > 0:
         last_medial_axis = medial_axis.copy()
         while True:
@@ -315,33 +316,33 @@ def estimate_background(dye, mask, halo_sig):
 
 
 def background_correction(dye, file_raw, sigma, lower_thresh, halo_sig):
-    if file_raw !=None:
-        if np.size(file_raw)>1:
-            file_raw = file_raw[0]
+    # if file_raw !=None:
+    #     if np.size(file_raw)>1:
+    #         file_raw = file_raw[0]
+    #
+    #     bf          = read_file(file_raw)
+    #
+    #     mask_bf     = create_mask(invert_bf(bf), sigma, lower_thresh, halo_sig)
+    #
+    #     # estimate background of bf and dye
+    #     back_bf     = estimate_background(bf, mask_bf, halo_sig)
+    #     back_dye    = estimate_background(dye, mask_bf, halo_sig)
+    #
+    #     # based on the assumption:
+    #     # background (ligth below tube) / background reaching the cam constant
+    #     # ie not dependend on the intensity and the wavelength
+    #     # -> I_b,bf / I^0_b,bf * I^0_b, green = I_b,green
+    #     added_back  = calc_ratio(bf, back_bf) * back_dye
+    #
+    #     # tube signal = signal - background contribution
+    #     corrected_dye = dye - added_back
+    #
+    # else:
+    mask_back = create_mask(dye, sigma, lower_thresh)
+    background = np.where(mask_back==0, dye, 0)
 
-        bf          = read_file(file_raw)
-
-        mask_bf     = create_mask(invert_bf(bf), sigma, lower_thresh, halo_sig)
-
-        # estimate background of bf and dye
-        back_bf     = estimate_background(bf, mask_bf, halo_sig)
-        back_dye    = estimate_background(dye, mask_bf, halo_sig)
-
-        # based on the assumption:
-        # background (ligth below tube) / background reaching the cam constant
-        # ie not dependend on the intensity and the wavelength
-        # -> I_b,bf / I^0_b,bf * I^0_b, green = I_b,green
-        added_back  = calc_ratio(bf, back_bf) * back_dye
-
-        # tube signal = signal - background contribution
-        corrected_dye = dye - added_back
-
-    else:
-        mask_back = create_mask(dye, sigma, lower_thresh, halo_sig)
-        background = np.where(mask_back==0, dye, 0)
-
-        background = np.where(background!=0, background, np.nan) # 0 -> nan
-        corrected_dye = dye - np.nanmean(background)
+    background = np.where(background!=0, background, np.nan) # 0 -> nan
+    corrected_dye = dye - np.nanmean(background)
 
 
     # necessary, otherwise negative values mess with mask

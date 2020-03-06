@@ -6,6 +6,26 @@ from analysis.tools import *
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar # scalebar
 
 
+
+plt.rcParams["font.family"] = 'sans-serif'
+plt.rcParams['font.sans-serif'] = ['CMU Sans Serif']
+plt.rcParams['mathtext.default'] = 'regular'
+params = {'text.usetex': False, 'mathtext.fontset': 'cm'}
+plt.rcParams.update(params)
+
+# SMALL_SIZE = 8
+# MEDIUM_SIZE = 10
+#
+# plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+# plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
+# plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
+# plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+# plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+# plt.rc('legend', fontsize=MEDIUM_SIZE)    # legend fontsize
+# plt.rc('figure', titlesize=MEDIUM_SIZE)  # fontsize of the figure title
+
+
+
 def plot_image(file_dat, keyword, file_plot, show=False):
     image = np.load(file_dat + '.npz')[keyword]
 
@@ -43,7 +63,7 @@ def plot_branch(branch_map, label, path_name, scaling=None, back=None):
                            pixels_scalebar, str(scalebar_size) + r' $\mu$m',
                            'lower right',
                            pad=0.3,
-                           color='black',
+                           color='white',
                            frameon=False,
                            size_vertical=1)
 

@@ -15,7 +15,7 @@ COLOR       = os.sys.argv[2].strip()
 NO_SLICES   = int(os.sys.argv[3])
 MAX_FRAME   = 200
 SKIP        = False
-IGNORE_CONV = True      # ignore running czi converters
+IGNORE_CONV = False      # ignore running czi converters
 ############################################
 ############################################
 

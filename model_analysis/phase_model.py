@@ -46,7 +46,7 @@ def unique_tol(arr, tol=1e-3):
 
 def phase_model(mat_file):
 
-    times           = (300, None)
+    times           = (200, 900) # at least ~10 to get constant timeincrement
     positions       = (None, None)
 
 
@@ -172,14 +172,14 @@ def phase_model(mat_file):
 
     phase_shift_c = phase_average(phase_radius.kymo,
                                 [radii, conce],
-                                filename, '', no_bins=20)
+                                filename, 'concentration', no_bins=20)
 
     upd_out(to_save_dict, ('phase_shift_c', phase_shift_c) )
 
     ##################################################################
     ######################### correlations ###########################
     ##################################################################
-    corr_shift_c = correlation_shift(radii, conce, filename, 'kymos',
+    corr_shift_c = correlation2d(radii, conce, filename, 'kymos',
                             upsample_t=2, upsample_x=1,
                             search_range_in_s=1./freq_r)
     upd_out(to_save_dict, ('corr_shift_c', corr_shift_c) )

@@ -21,7 +21,7 @@ class data_paths:
     files
     Note that this class does not know about config files
     """
-    def __init__(self, image_prefix, no, zeros, texas, green, bf):
+    def __init__(self):
 
         if self.subdir == None:
             dir = self.path
@@ -46,29 +46,29 @@ class data_paths:
             if self.subdir != '':
                 mk_mising_dir(d + self.path + '/' +self.subdir)
 
-        core = image_prefix + str(no).zfill(zeros)
+        core = self.image_prefix + str(self.no).zfill(self.zeros)
 
 
         #### Bright field ####
-        if bf != None:
-            bf = [x.strip() for x in bf.split()]
-            if np.size(bf)>1:
-                self.file_raw = [dir_raw + core + b + '.tif' for b in bf]
-            elif np.size(bf)==1:
-                self.file_raw = dir_raw + core + bf[0] + '.tif'
+        if self.bf != None:
+            self.bf = [x.strip() for x in self.bf.split()]
+            if np.size(self.bf)>1:
+                self.file_raw = [dir_raw + core + b + '.tif' for b in self.bf]
+            elif np.size(self.bf)==1:
+                self.file_raw = dir_raw + core + self.bf[0] + '.tif'
             else:
                 self.file_raw = dir_raw + core + '.tif'
         else:
             self.file_raw = None
 
         #### Green/Red channels ####
-        if green != None:
-            self.file_raw1 = dir_raw + core + green + '.tif'
+        if self.green != None:
+            self.file_raw1 = dir_raw + core + self.green + '.tif'
         else:
             self.file_raw1 = None
 
-        if texas != None:
-            self.file_raw2 = dir_raw + core + texas + '.tif'
+        if self.texas != None:
+            self.file_raw2 = dir_raw + core + self.texas + '.tif'
         else:
             self.file_raw2 = None
 
@@ -92,7 +92,11 @@ class data_paths:
         self.file_plot_tube_profile = mk_mising_dir(self.path_plots + 'tube_profile/') + set_file
         self.file_plot_set          = self.path_plots + set_file
 
-        self.file_log = dir_logs + self.keyword + '.log'
+        self.file_log       = mk_mising_dir(dir_logs) + self.keyword + '.log'
+        self.file_meta_plot = mk_mising_dir(dir_plots + '/meta/')
+
+        if self.lower_thresh != None:
+            self.file_meta_plot += 'back_corr'
 
 
 #####################################################
@@ -118,6 +122,7 @@ class data(data_paths):
         self.keyword        = keyword
         self.method         = method
 
+        self.no             = no
 
         # directories. subdir is optional
         self.path           = params.get('path')
@@ -142,7 +147,7 @@ class data(data_paths):
         # number of conncted areas that are interpreted as networks
         # '1' keeps only the largest area, None does not change the mask
         self.extract        = params.getint('extract', 1)
-        self.branch_thresh  = params.getint('branch_thresh', 10)
+        self.branch_thresh  = params.getint('branch_thresh', 100)
 
         # if analyse flow, flow_analysis is called, bf frames as channels is
         # assumed
@@ -152,7 +157,7 @@ class data(data_paths):
         # interpolation is used to shift signals accordingly to account for
         # time shift between imaging
         # assumed order per frame: 1. texas 2. green
-        self.symm_setup     = params.getboolean('symm_setup', False)
+        self.symm_setup     = params.getboolean('symm_setup', True)
 
         # frame interval in seconds and scaling (um(!) per pixel)
         self.frame_int      = params.getfloat('frame_int', 1.0)
@@ -171,16 +176,18 @@ class data(data_paths):
 
 
         # channel naming, image prefix (stuff before frame number)
-        image_prefix        = params.get('image_prefix', self.subdir + '_t')
-        texas               = params.get('texas', None)
-        green               = params.get('green', None)
+        self.image_prefix        = params.get('image_prefix', self.subdir + '_t')
+        self.texas               = params.get('texas', None)
+        self.green               = params.get('green', None)
 
-        bf                  = params.get('bf', None)
+        self.bf                  = params.get('bf', None)
 
         # digits in image names, note that this is not given by total number of
         # frames as analysis might only handle a subset of available images
-        zeros               = params.getint('zeros', 3)
+        self.zeros               = params.getint('zeros', 3)
 
-        super(data, self).__init__(image_prefix, no, zeros,
-                                    texas, green,
-                                    bf)
+        super(data, self).__init__()
+
+
+    def update(self):
+        super(data, self).__init__()

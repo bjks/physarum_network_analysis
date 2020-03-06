@@ -32,7 +32,7 @@ def analyse_flow_field(data_sets):
 ##############   network   ##############
 #########################################
 
-def main(): ## python3 piv.py <keyword> <color> <first> <last(+1)>
+def main(): ## python3 piv.py <keyword> <color> 
 
     set_keyword = os.sys.argv[1].strip()
     color       = os.sys.argv[2].strip()

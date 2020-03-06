@@ -1,7 +1,21 @@
+------ USEFUL COMMANDS ------
+ls -1 | wc -l
 find . -type f -name "*_tg*" -delete
+qstat -u "bksche" | awk '{if ($5 == "r" || $5 == "qw") print $0;}' | wc -l
 
 ------ RESULTS ------
 rsync -rav -e ssh --include '*/' --exclude='*_t*' bksche@10.217.100.61:/data.bpm/bksche/results ~/image_analysis/
+
+
+------ PLOTS ------
+rsync -rav -e ssh --include '*/' bksche@10.217.100.61:/data.bpm/bksche/plots ~/image_analysis/
+
+
+
+
+
+ olds...
+---------
 rsync -rav -e ssh --include '*/' --exclude='*_t*' bksche@10.216.1.1:/data.bpm/bksche/results ~/image_analysis/
 rsync -rav -e ssh  --exclude='*' --include '*/' --include '*001_inter_mean*' bksche@10.216.1.1:/data.bpm/bksche/results ~/image_analysis/
 
@@ -18,10 +32,6 @@ rsync -azP --dry-run bksche@10.216.2.1:/data.bpm/bksche/results --include '*/' -
 ------ RESULTS ------
 rsync -azP bksche@10.216.1.1:/data.bpm/bksche/results/2019-04-11 --include '*/' Documents/image_analysis/results/
 rsync -azP --dry-run bksche@10.216.2.1:/data.bpm/bksche/results Documents/image_analysis/
-
-
------ COUNT ------
-ls -1 | wc -l
 
 
 ----- GIT -----
