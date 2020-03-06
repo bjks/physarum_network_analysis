@@ -7,6 +7,8 @@ sys.path.append("..")
 
 from analysis.network_analysis import *
 from analysis.data_sets import *
+from analysis.plotting import *
+
 
 
 def snr(data_sets, color):
@@ -49,14 +51,13 @@ def main():
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
 
-
     ax1.plot(time, snr_g, color = 'green')
     ax2.plot(time, snr_t, color = 'red')
 
     ax1.set_ylabel('SNR green')
     ax2.set_ylabel('SNR red')
 
-    plt.xlabel('time (s)')
+    ax1.set_xlabel('time (s)')
     plt.savefig(data_sets[0].file_plot_set + '_snr.pdf')
 
 if __name__ == '__main__':

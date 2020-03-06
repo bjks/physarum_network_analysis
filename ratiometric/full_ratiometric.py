@@ -15,7 +15,7 @@ NO_SLICES   = int(os.sys.argv[2])
 COLOR       = 'sep'
 MAX_FRAME   = 200
 SKIP        = False
-IGNORE_CONV = False      # ignore running czi converters
+WAIT_FORCZI = False      # wait for running czi converters
 ############################################
 ############################################
 
@@ -115,10 +115,8 @@ def check_and_wait(sec, script):
 ####################################################################
 print("Start analysis of ", NAME, " at ", datetime.datetime.now())
 
-if SKIP:
-    pass
-else:
-    if not IGNORE_CONV:
+if  not SKIP:
+    if WAIT_FORCZI:
         check_and_wait(100, 'czi_')
     run_ratiometric()
     check_and_wait(100, 'ratiomet')

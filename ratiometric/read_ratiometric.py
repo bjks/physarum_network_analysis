@@ -13,6 +13,8 @@ from analysis.tools import *
 
 
 from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar # scalebar
+plt.rcParams["font.family"] = 'sans-serif'
+plt.rcParams['font.sans-serif'] = ['Avenir', 'CMU Sans Serif']
 
 
 
@@ -175,14 +177,14 @@ def vis_clean(set, key, cmap, thick=False, cbar=True):
 
 def plot_samples(data_sets, show, pretty=False):
     for set in data_sets:
-        # processing_visualization(set.file_dat, set.file_plot, set.analyse_flow,
-        #                             show=show, pretty=pretty)
-        # ##
+        processing_visualization(set.file_dat, set.file_plot, set.analyse_flow,
+                                    show=show, pretty=pretty)
+        ##
 
         vis_mask(set)
-        #
-        # vis_clean(set, 'c_green', 'Greens', thick=True)
-        # vis_clean(set, 'c_texas', 'Reds', thick=True)
+
+        vis_clean(set, 'green_clean', 'Greens', thick=True)
+        vis_clean(set, 'c_texas', 'Reds', thick=True)
 
 
 
