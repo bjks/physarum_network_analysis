@@ -31,7 +31,7 @@ def process_phase(set, label):
 
     substract_ecto  = False
 
-    max_period      = 140
+    max_period      = 150
     min_frequency   = 1./max_period
 
     bandwidth      = np.array([-0.005, 0.005])
@@ -321,6 +321,11 @@ def process_phase(set, label):
                                             , **to_save_dict)
         print('Saved npz \n')
 
+def get_argv(no):
+    if len(os.sys.argv)>no:
+        return os.sys.argv[no]
+    else:
+        return None
 
 
 def main():
@@ -329,9 +334,17 @@ def main():
     set             = data(set_keyword, no=data(set_keyword).first,
                             method='inter_mean', color='sep')
 
-    if len(os.sys.argv)>2:
-        label =  int(os.sys.argv[2])
-        process_phase(set, label)
+    label = get_argv(2)
+    dummy_lower_thresh = get_argv(3)
+
+    if dummy_lower_thresh:
+        set.lower_thresh = int(dummy_lower_thresh)
+        set.update()
+        print(set.lower_thresh)
+
+
+    if label != None:
+        process_phase(set, int(label))
 
     else:
         num_threads = multiprocessing.cpu_count()

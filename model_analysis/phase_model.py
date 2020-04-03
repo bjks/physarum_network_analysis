@@ -46,7 +46,7 @@ def unique_tol(arr, tol=1e-3):
 
 def phase_model(mat_file):
 
-    times           = (200, 900) # at least ~10 to get constant timeincrement
+    times           = (100, None) # at least ~10 to get constant timeincrement
     positions       = (None, None)
 
 
@@ -59,6 +59,7 @@ def phase_model(mat_file):
     time_steps = np.diff(kymos_data['binTime'][times[0]:times[1],0])
 
     t_scaling = unique_tol(time_steps)
+    print("time steps", np.shape(kymos_data['binTime']))
     if np.size(t_scaling)>1:
         print('WARNING: time_step not unique up to tolerance')
     else:
@@ -172,7 +173,8 @@ def phase_model(mat_file):
 
     phase_shift_c = phase_average(phase_radius.kymo,
                                 [radii, conce],
-                                filename, 'concentration', no_bins=20)
+                                filename, 'concentration', no_bins=20,
+                                shift_meth='fit')
 
     upd_out(to_save_dict, ('phase_shift_c', phase_shift_c) )
 
@@ -185,7 +187,7 @@ def phase_model(mat_file):
     upd_out(to_save_dict, ('corr_shift_c', corr_shift_c) )
 
 
-    corr_shift_f = correlation_shift(conce, flow, filename,
+    corr_shift_f = correlation2d(conce, flow, filename,
                         'flow-concentration',
                         upsample_t=2, upsample_x=1,
                         search_range_in_s=1./freq_r)

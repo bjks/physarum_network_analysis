@@ -8,7 +8,7 @@ from mpl_toolkits.axes_grid1.anchored_artists import AnchoredSizeBar # scalebar
 
 
 plt.rcParams["font.family"] = 'sans-serif'
-plt.rcParams['font.sans-serif'] = ['CMU Sans Serif']
+# plt.rcParams['font.sans-serif'] = ['CMU Sans Serif']
 plt.rcParams['mathtext.default'] = 'regular'
 params = {'text.usetex': False, 'mathtext.fontset': 'cm'}
 plt.rcParams.update(params)

@@ -49,16 +49,23 @@ def plot_all_shifts(all_sets):
 
     sets_labels, corr_shifts_c = collect_from_npzs(all_sets, 'corr_shifts_c', 1)
 
+    size = 80
+    size_small = size*0.66
+    c_dir = dict(c='blue', label=r'$c$', s=size, alpha=0.5)
+    ci_dir = dict(c='lightskyblue', label=r'$c^{i}$', s=size_small, alpha=0.5)
+    co_dir = dict(c='darkblue', label=r'$c^{o}$', s=size_small, alpha=0.5)
+
+
     fig, ax = plt.subplots()
-    ax.scatter(sets_labels, corr_shifts_c[:,0], c='blue', label=r'$c$')
-    ax.scatter(sets_labels, corr_shifts_c[:,1], c='lightskyblue', label=r'$c^{i}$')
-    ax.scatter(sets_labels, corr_shifts_c[:,2], c='darkblue', label=r'$c^{o}$')
+    ax.scatter(sets_labels, corr_shifts_c[:,0], **c_dir)
+    ax.scatter(sets_labels, corr_shifts_c[:,1], **ci_dir)
+    ax.scatter(sets_labels, corr_shifts_c[:,2], **co_dir)
 
     ax.set_ylabel(r'time shift $\Delta \mathcal{T}$ (s)')
     ax.set_xlabel('data set, branch')
     plt.xticks(rotation=45, ha='right')
 
-    fig.legend(bbox_to_anchor=(0.5, 0.9), loc='lower center', ncol=3)
+    fig.legend(bbox_to_anchor=(0.5, 1.01), loc='lower center', ncol=3)
     plt.savefig(plot_file + 'time_shifts.pdf', dpi=400,
                     bbox_inches='tight')
 
@@ -68,15 +75,15 @@ def plot_all_shifts(all_sets):
 
     _, freq_r = collect_from_npzs(all_sets, 'freq_r')
     fig, ax = plt.subplots()
-    ax.scatter(sets_labels, corr_shifts_c[:,0]*freq_r, c='blue', label=r'$c$')
-    ax.scatter(sets_labels, corr_shifts_c[:,1]*freq_r, c='lightskyblue', label=r'$c^{i}$')
-    ax.scatter(sets_labels, corr_shifts_c[:,2]*freq_r, c='darkblue', label=r'$c^{o}$')
+    ax.scatter(sets_labels, corr_shifts_c[:,0]*freq_r, **c_dir)
+    ax.scatter(sets_labels, corr_shifts_c[:,1]*freq_r, **ci_dir)
+    ax.scatter(sets_labels, corr_shifts_c[:,2]*freq_r, **co_dir)
 
     ax.set_ylabel(r'norm. time shift $\Delta \mathcal{T}/T$')
     ax.set_xlabel('data set, branch')
     plt.xticks(rotation=45, ha='right')
 
-    fig.legend(bbox_to_anchor=(0.5, 0.9), loc='lower center', ncol=3)
+    fig.legend(bbox_to_anchor=(0.5, 1.01), loc='lower center', ncol=3)
     plt.savefig(plot_file + 'norm_time_shifts.pdf', dpi=400,
                     bbox_inches='tight')
 
@@ -87,14 +94,14 @@ def plot_all_shifts(all_sets):
 
     fig, ax = plt.subplots()
     _, phase_shift_c = collect_from_npzs(all_sets, 'phase_shift_c')
-    ax.scatter(sets_labels, phase_shift_c[:,1], c='blue', label=r'$c$')
-    ax.scatter(sets_labels, phase_shift_c[:,2], c='lightskyblue', label=r'$c^{i}$')
-    ax.scatter(sets_labels, phase_shift_c[:,3], c='darkblue', label=r'$c^{o}$')
+    ax.scatter(sets_labels, phase_shift_c[:,1], **c_dir)
+    ax.scatter(sets_labels, phase_shift_c[:,2], **ci_dir)
+    ax.scatter(sets_labels, phase_shift_c[:,3], **co_dir)
     ax.set_ylabel(r'phase difference $\Delta \phi$ (rad)')
     ax.set_xlabel('data set, branch')
     plt.xticks(rotation=45, ha='right')
 
-    fig.legend(bbox_to_anchor=(0.5, 0.9), loc='lower center', ncol=3)
+    fig.legend(bbox_to_anchor=(0.5, 1.01), loc='lower center', ncol=3)
     plt.savefig(plot_file + 'phase_diff.pdf', dpi=400,
                 bbox_inches='tight')
     # plt.show()
@@ -103,26 +110,26 @@ def plot_all_shifts(all_sets):
 
 
 def main():
-    use_back_corr_files = int(os.sys.argv[1].strip())
-
-    if use_back_corr_files:
-        print("\n   ------------------- USE BACK CORR ------------------- \n")
-        dummy_lower_thresh = 1
-    else:
-        print("\n   ================ DONT USE BACK CORR ================ \n")
-        dummy_lower_thresh = None
+    # use_back_corr_files = int(os.sys.argv[1].strip())
+    #
+    # if use_back_corr_files:
+    #     print("\n   ------------------- USE BACK CORR ------------------- \n")
+    #     dummy_lower_thresh = 1
+    # else:
+    #     print("\n   ================ DONT USE BACK CORR ================ \n")
+    #     dummy_lower_thresh = None
 
     data_keys = []
     # data_keys.append('2019-07-04')
     # data_keys.append('2019-08-08')
-    data_keys.append('2019-06-20-2-r')
-
-    data_keys.append('2019-07-03-3')
+    # data_keys.append('2019-06-20-2-r')
+    #
+    # data_keys.append('2019-07-03-3')
 
     # data_keys.append('2019-08-09-3')
-    data_keys.append('2019-08-11')
+    # data_keys.append('2019-08-11')
     data_keys.append('2019-08-25')
-    # data_keys.append('2019-08-29')
+    data_keys.append('2019-08-29')
 
     data_keys.append('2019-09-11')
     data_keys.append('2019-09-25-1')
@@ -134,11 +141,12 @@ def main():
     all_sets = [data(key, no=data(key).first, method='inter_mean',
                     color='sep') for key in data_keys]
 
-    for set in all_sets:
-        set.lower_thresh = dummy_lower_thresh
-        set.update()
+    for dummy_lower_thresh in [None,1]:
+        for set in all_sets:
+            set.lower_thresh = dummy_lower_thresh
+            set.update()
 
-    plot_all_shifts(all_sets)
+        plot_all_shifts(all_sets)
 
 if __name__ == '__main__':
     main()

@@ -816,7 +816,7 @@ def sin_func(phase, A, phi):
     return A * np.cos(phase - phi)
 
 
-def phase_average(phase, kymos, filename, y_label, no_bins=15):
+def phase_average(phase, kymos, filename, y_label, no_bins=15, shift_meth='fit'):
 
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
@@ -828,36 +828,40 @@ def phase_average(phase, kymos, filename, y_label, no_bins=15):
                                                     n_bins=no_bins, norm=False)
         bin = bin_edges[:-1] + np.diff(bin_edges)/2
 
-
-        phase_sample = np.linspace(bin[0], bin[-1], 100)
-        popt, pcov   = curve_fit(sin_func, bin, bin_mean, p0=(-1,0))
-
         if k == kymos[0]:
             axis = ax1
-            lab_text = k.get_eq(r'$(\phi)$')
         else:
             axis = ax2
-            lab_text = k.get_eq(r'$(\phi)$') + ', shift: ' + \
-                        str( np.around(popt[-1], decimals=2) )
 
+        if shift_meth=='fit':
+            phase_sample = np.linspace(bin[0], bin[-1], 100)
+            popt, pcov   = curve_fit(sin_func, bin, bin_mean, p0=(-1,0.1))
+            shift = popt[-1]
+
+            axis.plot(phase_sample, sin_func(phase_sample, *popt), '--',
+                        color=k.color)
+            # plt.fill_between(bin, bin_mean - bin_std, bin_mean + bin_std,
+            #                      alpha=0.2, color=k.color)
+
+            # min = bin[np.argmin(bin_mean)]
+            # plt.axvline(x=min, linewidth=1, color=k.color)
+        elif shift_meth=='peak':
+            pass
+
+        if k == kymos[0]:
+            lab_text = k.get_eq(r'$(\phi)$')
+        else:
+            lab_text = k.get_eq(r'$(\phi)$') + ', shift: ' + \
+                        str( np.around(shift, decimals=2) )
 
         axis.plot(bin, bin_mean, label=lab_text, color=k.color)
-
-        # plt.fill_between(bin, bin_mean - bin_std, bin_mean + bin_std,
-        #                      alpha=0.2, color=k.color)
-
-        # min = bin[np.argmin(bin_mean)]
-        # plt.axvline(x=min, linewidth=1, color=k.color)
-
-        axis.plot(phase_sample, sin_func(phase_sample, *popt), '--',
-                    color=k.color)
 
         # y1 = sin_func(phase_sample, popt[0], popt[1] + pcov[1,1]**0.5)
         # y2 = sin_func(phase_sample, popt[0], popt[1] - pcov[1,1]**0.5)
         # plt.fill_between(phase_sample, y1, y2, color=k.color, alpha=0.15)
 
-        axis.axvline(x=popt[-1], linewidth=1, color=k.color)
-        phase_shift.append(popt[-1])
+        axis.axvline(x=shift, linewidth=1, color=k.color)
+        phase_shift.append(shift)
 
 
     ax1.set_ylabel('radius $(\mu$m$)$')
@@ -872,7 +876,7 @@ def phase_average(phase, kymos, filename, y_label, no_bins=15):
 
     fig.legend(bbox_to_anchor=(0.5, 0.9), loc='lower center')
 
-    plt.savefig(filename +'_'+ y_label + '_phase.pdf', dpi=400,
+    plt.savefig(filename +'_'+ y_label[:5] + '_phase.pdf', dpi=400,
                 bbox_inches='tight')
     plt.close()
 
