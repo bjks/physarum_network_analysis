@@ -315,7 +315,7 @@ def estimate_background(dye, mask, halo_sig):
     return estim_back
 
 
-def background_correction(dye, file_raw, sigma, lower_thresh, halo_sig):
+def background_correction(dye, mask_back):
     # if file_raw !=None:
     #     if np.size(file_raw)>1:
     #         file_raw = file_raw[0]
@@ -338,7 +338,7 @@ def background_correction(dye, file_raw, sigma, lower_thresh, halo_sig):
     #     corrected_dye = dye - added_back
     #
     # else:
-    mask_back = create_mask(dye, sigma, lower_thresh)
+
     background = np.where(mask_back==0, dye, 0)
 
     background = np.where(background!=0, background, np.nan) # 0 -> nan

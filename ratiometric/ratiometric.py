@@ -18,12 +18,10 @@ def process_ratiometric(set):
     texas = read_file(set.file_raw2)
 
     if set.lower_thresh != None:
-        green = background_correction(green, set.file_raw, set.sigma,
-                                      set.lower_thresh, set.halo_sig)
+        mask_back = create_mask(texas, set.sigma, set.lower_thresh)
 
-        texas = background_correction(texas, set.file_raw, set.sigma,
-                                      set.lower_thresh, set.halo_sig)
-
+        green = background_correction(green, mask_back)
+        texas = background_correction(texas, mask_back)
 
     ### keep only the n largest objects, n given by 'extract'
     mask = create_mask(texas, set.sigma, set.threshold, set.halo_sig)

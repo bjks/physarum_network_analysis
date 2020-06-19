@@ -70,7 +70,7 @@ class kymograph:
     #  Constructor (-like) and copy methods  #
     # ===================================================== #
     def __init__(self, kymo, name, t_scaling, x_scaling, c_scaling,
-                state='raw', cmap='viridis', unit='(a.u.)', color=None):
+                state='raw', cmap='viridis', unit='(a.u.)', color=None, t0=0):
 
         self.kymo       = kymo * c_scaling
 
@@ -85,12 +85,13 @@ class kymograph:
         self.unit       = unit
         self.color      = color
 
+        self.t0         = t0
+
     def __getitem__(self, index):
         return self.kymo[index]
 
     def __setitem(self, index, dat):
         self.kymo[index] = dat
-
 
 
     def copy(self):
@@ -108,19 +109,30 @@ class kymograph:
                 self.state.replace(' ', '')+')'
 
 
-    def get_eq(self, dep=r'$(t,x)$'):
+    def get_eq(self, dep=r'$(z,t)$'):
         if self.name=='radius':
             return r'$a$' + dep
         elif self.name=='concentration':
-            return r'$c$' + dep
+            return r'$C$' + dep
         elif self.name.startswith('inner'):
-            return r'$c^i$' + dep
+            return r'$C^i$' + dep
         elif self.name.startswith('outer'):
-            return r'$c^o$' + dep
+            return r'$C^o$' + dep
+        elif self.name.startswith('flow'):
+            return r'$U$' + dep
+        elif self.name.startswith('passive stress'):
+            return r'$\sigma_p$' + dep
+        elif self.name.startswith('active stress'):
+            return r'$\sigma_a$' + dep
+        elif self.name.startswith('total'):
+            return r'$\sigma_c$' + dep
         else:
             return ''
 
-    def get_plot_title(self):
+    def get_plot_title(self, short=False):
+        if short:
+            return r'{0} ({1})'.format(self.get_eq(), self.unit)
+
         if self.state == 'raw':
             return r'{0} {1} ({2})'.format(self.name, self.get_eq(), self.unit)
 
@@ -138,7 +150,8 @@ class kymograph:
                 cmap='viridis', unit='a.u.',
                 align_keyword='reference_point',
                 times=(None,None), positions=(None, None),
-                ismat_file=False):
+                ismat_file=False,
+                t0=0):
 
 
         kymo      = kymos_data[keyword]
@@ -160,7 +173,8 @@ class kymograph:
                         state='raw',
                         cmap=cmap,
                         unit=unit,
-                        color=None)
+                        color=None,
+                        t0=t0)
 
 
     def crop_kymo(self):
@@ -303,6 +317,7 @@ class kymograph:
 # ===================================================== #
 
 def plot_kymograph_series(kymo_list, filename, lim_modes='min'):
+
     fig, axes = plt.subplots(len(kymo_list), 1)
     ax = axes.ravel()
 
@@ -310,7 +325,7 @@ def plot_kymograph_series(kymo_list, filename, lim_modes='min'):
         lim_modes = [lim_modes for i in kymo_list]
 
     for kymo, ax, lim_mode in zip(kymo_list, axes, lim_modes):
-        extent =    [0, kymo.kymo.shape[1]*kymo.t_scaling,
+        extent =    [kymo.t0 + 0, kymo.t0 + kymo.kymo.shape[1]*kymo.t_scaling,
                      0, kymo.kymo.shape[0]]
 
 
@@ -359,7 +374,7 @@ def plot_kymograph(kymo_list, filename, lim_modes='minmax'):
 
         fig, ax = plt.subplots()
 
-        extent =    [0, kymo.kymo.shape[1]*kymo.t_scaling,
+        extent =    [kymo.t0 + 0, kymo.t0 + kymo.kymo.shape[1]*kymo.t_scaling,
                      0, kymo.kymo.shape[0]]
 
         if lim_mode.startswith('std'):
@@ -471,8 +486,11 @@ def find_nearest(array, value):
 
 
 def plot_time_series(kymos, path=None, filename=None, window_size=10,
-                    min_dist_s=70, spacial_avg=True):
+                    min_dist_s=70, spacial_avg=True, filename_suf=None,
+                    figsize=None, line=False):
 
+    if figsize!=None:
+        plt.figure(figsize=figsize)
     no_kymos = len(kymos)
 
     if np.any(path!=None):
@@ -482,19 +500,20 @@ def plot_time_series(kymos, path=None, filename=None, window_size=10,
 
     for i, kymo in zip(np.arange(no_kymos), kymos):
         ax = plt.subplot2grid((no_kymos, 3), (i,0), rowspan=1, colspan=colspan)
+        ax.ticklabel_format(style='sci', scilimits=(-1,3), axis='y')
 
         if spacial_avg:
             time_series = slid_aver2d(kymo.kymo, window_size)[::window_size]
         else:
-            time_series = kymo.kymo[::window_size]
+            time_series = kymo.kymo[int(window_size/2)::window_size]
 
-        timestamps = np.arange(np.shape(time_series)[1]) *  kymos[0].t_scaling
+        timestamps = np.arange(np.shape(time_series)[1]) * kymos[0].t_scaling + kymos[0].t0
 
+        pixel_positions = np.arange(0, np.shape(time_series)[0] ) \
+                            * window_size + int(window_size/2)
 
-        pixel_positions = np.arange(0, np.shape(time_series)[0] ) * window_size
-
-        norm = mpl.colors.Normalize(vmin=pixel_positions.min(),
-                                    vmax=pixel_positions.max())
+        norm = mpl.colors.Normalize(vmin=0,
+                                    vmax=kymo.kymo.shape[0])
 
         cmap = mpl.cm.ScalarMappable(norm=norm, cmap='plasma')
         cmap.set_array([])
@@ -505,8 +524,8 @@ def plot_time_series(kymos, path=None, filename=None, window_size=10,
 
             im = ax.plot(timestamps, t_s, c=cmap.to_rgba(p))
 
-        ax.set_xlim(0, timestamps[-1])
-        ax.set_ylabel(kymo.get_eq())
+        ax.set_xlim(timestamps[0], timestamps[-1])
+        ax.set_ylabel(kymo.get_plot_title(short=True))
         ax.xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator())
         ax.grid(True, axis='x', which='both')
 
@@ -520,16 +539,30 @@ def plot_time_series(kymos, path=None, filename=None, window_size=10,
         ax = plt.subplot2grid((no_kymos, 3), (0,2), rowspan=no_kymos, colspan=1)
 
         no_coords = path.shape[0]
-
-        ax.scatter(path[:,1], path[:,0], c=range(no_coords), vmin=0,
-                    vmax=no_coords, cmap='plasma')
-
+        if line:
+            ax.scatter(path[:,1], path[:,0], c=range(no_coords), vmin=0,
+                    vmax=no_coords, cmap='plasma', s=1e5, marker='|')
+            # ax.set_title('position along tube')
+            ax.text(0.6, 0.5,'position along tube',
+                 horizontalalignment='center',
+                 verticalalignment='center',
+                 transform = ax.transAxes, rotation=90)
+        else:
+            ax.scatter(path[:,1], path[:,0], c=range(no_coords), vmin=0,
+                        vmax=no_coords, cmap='plasma')
         ax.axis('equal')
         ax.invert_yaxis()
         ax.axis('off')
 
+
     plt.subplots_adjust(hspace=0.5)
-    plt.savefig(filename + 'time_series.pdf', dpi=400, bbox_inches='tight')
+
+    if filename_suf == None:
+        name = 'time_series.pdf'
+    else:
+        name = 'time_series' + filename_suf +'.pdf'
+
+    plt.savefig(filename + name, dpi=400, bbox_inches='tight')
     plt.close()
     # plt.show()
 
@@ -558,19 +591,15 @@ def dominant_freq(kymo, lowcut=0.05, max_period=None):
 
 
 def power_spec(kymo, filename, min_frequency, lowcut=0.005, highcut=0.05,
-                band=None, logscale=False):
-
+                band=None, logscale=False, mark_f=True):
     f, Pxx_den_full = signal.periodogram(kymo.kymo, fs=1./kymo.t_scaling,
                                 scaling='spectrum')
-
-
     #### dominant frequency ->
     P = np.mean(Pxx_den_full, axis=0)
     P_cut = P[f>min_frequency]
     freq = f[f>min_frequency]
     dominant_freq = freq[np.argmax(P_cut)]
     #### <-
-
 
     # adjust for plotting..
     range = (f < highcut) * (f > lowcut)
@@ -579,7 +608,6 @@ def power_spec(kymo, filename, min_frequency, lowcut=0.005, highcut=0.05,
 
     if logscale:
         Pxx_den_full = np.log(Pxx_den_full)
-
 
     Pxx_den         = np.mean(Pxx_den_full, axis=0)
 
@@ -600,13 +628,12 @@ def power_spec(kymo, filename, min_frequency, lowcut=0.005, highcut=0.05,
     ax[0].set_xticks([])
     ax[0].set_ylabel('pixel')
 
-
-    #
     ax[1].plot(f, Pxx_den)
 
-    ax[1].axvline(x=dominant_freq*1e3, linewidth=1, color='red',
-        label='dominant frequency: ' +
-        str(np.around(dominant_freq*1e3, decimals=2)) + ' mHz')
+    if mark_f:
+        ax[1].axvline(x=dominant_freq*1e3, linewidth=1, color='red',
+            label=r'$f=$' +
+            str(np.around(dominant_freq*1e3, decimals=2)) + ' mHz')
 
     if np.all(band != None):
         mark1 = (dominant_freq + band[0]) * 1e3
@@ -614,7 +641,6 @@ def power_spec(kymo, filename, min_frequency, lowcut=0.005, highcut=0.05,
         ax[1].axvspan(mark1, mark2, facecolor='0.2',
                         alpha=0.3, label='frequency band')
 
-    ax[1].legend()
 
     ax[1].xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     ax[1].set_xlabel('frequency (mHz)')
@@ -626,9 +652,13 @@ def power_spec(kymo, filename, min_frequency, lowcut=0.005, highcut=0.05,
     ax[1].set_xlim(f[0], f[-1])
     # fig.tight_layout()
 
-
-    plt.savefig(filename + kymo.get_file_title() + '_power.pdf', dpi=200,
-                bbox_inches='tight')
+    if mark_f:
+        ax[1].legend()
+        plt.savefig(filename + kymo.get_file_title() + '_power.pdf', dpi=150,
+                    bbox_inches='tight')
+    else:
+        plt.savefig(filename + kymo.get_file_title() + '_power_wo.pdf', dpi=200,
+                    bbox_inches='tight')
     plt.close()
 
     return dominant_freq
@@ -671,7 +701,7 @@ def spectro(kymo, filename, logscale=False, window_size_in_s=500, overlap=2,
     ax.set_ylabel('frequency (mHz)')
 
 
-    extent =    [0, kymo.kymo.shape[1]*kymo.t_scaling,
+    extent =    [kymo.t0 + 0, kymo.t0 + kymo.kymo.shape[1]*kymo.t_scaling,
                  0, f[-1]*1e3]
 
     im = ax.imshow(Sxx, cmap='plasma', extent=extent, origin='lower',
@@ -730,7 +760,7 @@ def uni_filter_circular(arr, size_tuple):
 
 def phase_shift2d(phase1, phase2, filename, t_window_in_s=300):
 
-    shift = phase2.kymo - phase1.kymo
+    shift = phase2.kymo - phase1.kymo - np.pi
 
     # map into  -pi, pi interval:
     shift = (shift + np.pi) % (2*np.pi) - np.pi
@@ -746,19 +776,20 @@ def phase_shift2d(phase1, phase2, filename, t_window_in_s=300):
     ax = axes.ravel()
     plt.subplots_adjust(hspace=0.7)
 
-    ax[0].set_title(r'phase difference $\Delta \phi\,$(rad)')
+    ax[0].set_title(r'phase difference $\Delta \phi$')
     ax[0].set_ylabel('space (pixel)')
 
-    ax[1].set_title(r'phase difference $\langle \Delta \phi \rangle\,$(rad), footprint: '+ \
-                    r'${0}$ pixels, '.format(footprint[0]) + \
-                    r'${0}$ s, '.format(np.around(footprint[1]*phase1.t_scaling)))
+    ax[1].set_title(r'phase difference $\langle \Delta \phi \rangle\,$')
+                    # footprint: '
+                    # r'${0}$ pixels, '.format(footprint[0]) + \
+                    # r'${0}$ s, '.format(np.around(footprint[1]*phase1.t_scaling)))
 
     ax[1].set_xlabel('time (s)')
     ax[1].set_ylabel('space (pixel)')
 
 
     # limits
-    extent =    [0, phase1.kymo.shape[1]*phase1.t_scaling,
+    extent =    [phase1.t0 + 0, phase1.t0 + phase1.kymo.shape[1]*phase1.t_scaling,
                  0, phase1.kymo.shape[0]]
 
     # colorbar ticks
@@ -773,15 +804,17 @@ def phase_shift2d(phase1, phase2, filename, t_window_in_s=300):
     # newcmp = ListedColormap(newcolors)
 
     im = ax[0].imshow(shift, extent=extent, origin='lower',
-                    aspect='auto', cmap='twilight', vmin=-np.pi, vmax=np.pi)
+                    aspect='auto', cmap='twilight_shifted_r', vmin=-np.pi, vmax=np.pi)
 
 
 
     im = ax[1].imshow(avg_shift, extent=extent, origin='lower',
-                    aspect='auto', cmap='twilight', vmin=-np.pi, vmax=np.pi)
+                    aspect='auto', cmap='twilight_shifted_r', vmin=-np.pi, vmax=np.pi)
 
     cbar = fig.colorbar(im, ax=ax.tolist(), orientation='vertical', ticks=ticks)
     cbar.ax.set_yticklabels(labels)
+    cbar.ax.set_ylabel(r'phase difference (rad)', rotation=90,
+                        labelpad=10)
 
     plt.savefig(filename  + 'phase_shift_map.pdf', dpi=400, bbox_inches='tight')
     plt.close()
@@ -829,39 +862,41 @@ def phase_average(phase, kymos, filename, y_label, no_bins=15, shift_meth='fit')
         bin = bin_edges[:-1] + np.diff(bin_edges)/2
 
         if k == kymos[0]:
+            lab_text = k.get_eq(r'$(\phi)$')
             axis = ax1
         else:
             axis = ax2
 
-        if shift_meth=='fit':
-            phase_sample = np.linspace(bin[0], bin[-1], 100)
-            popt, pcov   = curve_fit(sin_func, bin, bin_mean, p0=(-1,0.1))
-            shift = popt[-1]
+            if shift_meth=='fit':
+                phase_sample = np.linspace(bin[0], bin[-1], 100)
+                popt, pcov   = curve_fit(sin_func, bin, bin_mean, p0=(-1,0.))
+                shift = popt[-1]
+                # choose the minimum in the correct interval as 'shift'
+                if popt[0]>0:
+                    shift-=np.pi
+                    if shift<-np.pi:
+                        shift+=2*np.pi
 
-            axis.plot(phase_sample, sin_func(phase_sample, *popt), '--',
-                        color=k.color)
-            # plt.fill_between(bin, bin_mean - bin_std, bin_mean + bin_std,
-            #                      alpha=0.2, color=k.color)
+                axis.plot(phase_sample, sin_func(phase_sample, *popt), '--',
+                            color=k.color)
+                # plt.fill_between(bin, bin_mean - bin_std, bin_mean + bin_std,
+                #                      alpha=0.2, color=k.color)
 
-            # min = bin[np.argmin(bin_mean)]
-            # plt.axvline(x=min, linewidth=1, color=k.color)
-        elif shift_meth=='peak':
-            pass
+                # min = bin[np.argmin(bin_mean)]
+                # plt.axvline(x=min, linewidth=1, color=k.color)
+            elif shift_meth=='peak':
+                pass # to be written...
 
-        if k == kymos[0]:
-            lab_text = k.get_eq(r'$(\phi)$')
-        else:
             lab_text = k.get_eq(r'$(\phi)$') + ', shift: ' + \
                         str( np.around(shift, decimals=2) )
+            axis.axvline(x=shift, linewidth=1, color=k.color)
+            phase_shift.append(shift)
 
         axis.plot(bin, bin_mean, label=lab_text, color=k.color)
 
         # y1 = sin_func(phase_sample, popt[0], popt[1] + pcov[1,1]**0.5)
         # y2 = sin_func(phase_sample, popt[0], popt[1] - pcov[1,1]**0.5)
         # plt.fill_between(phase_sample, y1, y2, color=k.color, alpha=0.15)
-
-        axis.axvline(x=shift, linewidth=1, color=k.color)
-        phase_shift.append(shift)
 
 
     ax1.set_ylabel('radius $(\mu$m$)$')
@@ -914,7 +949,7 @@ def correlation1d(kymo_ref, kymo_list, filename, title, upsample_t=1,
         min_list.append(min_in_s)
         ax.plot(delta_t, corr1d, color=k.color)
         ax.axvline(x=min_in_s, linewidth=1, color=k.color,
-                    label=r'$C$' + r'$[$' + k.get_eq('') +',' + \
+                    label=r'$R$' + r'$[$' + k.get_eq('') +',' + \
                     kymo_ref.get_eq('')+ r'$](dt)$' + \
                     r', temporal shift $\Delta \mathcal{T}=$ ' \
                     + str(np.around(min_in_s, decimals=1)) + r'$\,$s')
@@ -964,7 +999,7 @@ def correlation2d(kymo_a, kymo_b, filename, title,
 
     ax.set_xlabel(r'time lag $dt\,$(s)')
     ax.set_ylabel(r'space lag $dx\,$(pixels)')
-    ax.set_title(r'$C[$' + kymo2.get_eq('') +',' + kymo1.get_eq('')+ r'$](dt, dx)$' )
+    ax.set_title(r'$R[$' + kymo2.get_eq('') +',' + kymo1.get_eq('')+ r'$](dt, dx)$' )
 
     ax.legend()
     divider = make_axes_locatable(ax)
@@ -1039,12 +1074,12 @@ def time_shift2d(kymo_a, kymo_b, filename, upsample_t=1, window_size_in_s=200,
     # plotting...
     fig, ax = plt.subplots()
 
-    ax.set_title(r'time shift $\Delta \mathcal{T}\,$(s)')
+    ax.set_title(r'time shift')
     ax.set_ylabel('space (pixel)')
     ax.set_xlabel('time (s)')
 
     # limits
-    extent =    [0, kymo_a.kymo.shape[1]*kymo_a.t_scaling,
+    extent =    [kymo_a.t0 + 0, kymo_a.t0 + kymo_a.kymo.shape[1]*kymo_a.t_scaling,
                  0, kymo_a.kymo.shape[0]]
 
     vminmax = np.max(np.abs([np.min(time_shift_map), np.max(time_shift_map)]))
@@ -1059,13 +1094,13 @@ def time_shift2d(kymo_a, kymo_b, filename, upsample_t=1, window_size_in_s=200,
     ticks = np.arange(-100, 100, 10)
     labels = ticks.astype(str)
 
-    mean = np.mean(time_shift_map)
-    hide_id = np.argmin(np.abs(ticks - mean))
-    labels[hide_id] = ''
-
-    ticks = np.append(ticks, mean)
-    labels = np.append(labels,
-                r'mean: ${0}$'.format(str(np.around(mean, decimals=1))))
+    # mean = np.mean(time_shift_map)
+    # hide_id = np.argmin(np.abs(ticks - mean))
+    # labels[hide_id] = ''
+    #
+    # ticks = np.append(ticks, mean)
+    # labels = np.append(labels,
+    #             r'mean: ${0}$'.format(str(np.around(mean, decimals=1))))
 
 
     # colorbar
@@ -1073,6 +1108,8 @@ def time_shift2d(kymo_a, kymo_b, filename, upsample_t=1, window_size_in_s=200,
     cbar = fig.colorbar(im, cax = divider.append_axes('right', size='5%',
                         pad=0.05), orientation='vertical', ticks=ticks)
     cbar.ax.set_yticklabels(labels)
+    cbar.ax.set_ylabel(r'time shift $\Delta \mathcal{T}\,$(s)', rotation=90,
+                        labelpad=20)
 
 
     plt.savefig(filename + kymo1.state + 'time_shift_map.pdf', dpi=400,

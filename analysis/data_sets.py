@@ -117,6 +117,7 @@ class data(data_paths):
         config = configparser.ConfigParser()
         config_file = '../config/' + keyword + '.ini'
         config.read(config_file)
+        print(config_file)
         params = config['params']
 
         self.keyword        = keyword

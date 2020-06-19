@@ -17,12 +17,6 @@ from analysis.plotting import *
 
 SHOW = False
 SAVE = False
-plt.rcParams["font.family"] = 'sans-serif'
-plt.rcParams['font.sans-serif'] = ['Avenir',
-                                    'Tahoma',
-                                    'DejaVu Sans',
-                                    'Lucida Grande',
-                                    'Verdana']
 
 def upd_out(d, *args, supr=False):
     d.update(args)

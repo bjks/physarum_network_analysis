@@ -58,7 +58,7 @@ def main():
     ax2.set_ylabel('SNR red')
 
     ax1.set_xlabel('time (s)')
-    plt.savefig(data_sets[0].file_plot_set + '_snr.pdf')
+    plt.savefig(data_sets[0].file_plot_set + '_snr.pdf', dpi=600, bbox_inches='tight')
 
 if __name__ == '__main__':
     main()

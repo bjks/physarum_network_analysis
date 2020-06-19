@@ -27,11 +27,13 @@ def process_phase(set, label):
     align_keyword   = 'reference_point'
 
     times           = set.times
+    if times[0]==None:
+        times = [0, times[1]]
     positions       = set.positions
 
     substract_ecto  = False
 
-    max_period      = 150
+    max_period      = 180
     min_frequency   = 1./max_period
 
     bandwidth      = np.array([-0.005, 0.005])
@@ -46,6 +48,9 @@ def process_phase(set, label):
         print("\nAnalyze: ", data_file)
         kymos_data = np.load(data_file)
         path_name = branch_plotpath(set, label)
+
+        if times[0]!=0 or times[1]!=None:
+            path_name = mk_mising_dir(path_name + 'short')
 
         filename = path_name + '/branch_' + str(label) + '_'
 
@@ -77,17 +82,19 @@ def process_phase(set, label):
                                             cmap=cmap_r,
                                             unit=r'$\mu$m',
                                             align_keyword=align_keyword,
-                                            times=times, positions=positions)
+                                            times=times, positions=positions,
+                                            t0=times[0]*set.frame_int)
 
 
         kymo_c_green     = kymograph.get_dat(kymos_data, 'kymo_c_green',
-                                            'green',
+                                            'intensity green channel',
                                              set.frame_int,
                                              set.pixel_scaling,
                                              1.,
                                              cmap='Greens',
                                              align_keyword=align_keyword,
-                                             times=times, positions=positions)
+                                             times=times, positions=positions,
+                                             t0=times[0]*set.frame_int)
 
         kymo_inner_green = kymograph.get_dat(kymos_data, 'kymo_c_inner_green',
                                             'inner green',
@@ -96,7 +103,8 @@ def process_phase(set, label):
                                              1.,
                                              cmap='Greens',
                                              align_keyword=align_keyword,
-                                             times=times, positions=positions)
+                                             times=times, positions=positions,
+                                             t0=times[0]*set.frame_int)
 
         kymo_outer_green = kymograph.get_dat(kymos_data, 'kymo_c_outer_green',
                                             'outer green',
@@ -105,16 +113,18 @@ def process_phase(set, label):
                                              1.,
                                              cmap='Greens',
                                              align_keyword=align_keyword,
-                                             times=times, positions=positions)
+                                             times=times, positions=positions,
+                                             t0=times[0]*set.frame_int)
 
         kymo_c_texas     = kymograph.get_dat(kymos_data, 'kymo_c_texas',
-                                            'red',
+                                            'intensity red channel',
                                              set.frame_int,
                                              set.pixel_scaling,
                                              1.,
                                              cmap='Reds',
                                              align_keyword=align_keyword,
-                                             times=times, positions=positions)
+                                             times=times, positions=positions,
+                                             t0=times[0]*set.frame_int)
 
         kymo_inner_texas = kymograph.get_dat(kymos_data, 'kymo_c_inner_texas',
                                             'inner red',
@@ -123,7 +133,8 @@ def process_phase(set, label):
                                              1.,
                                              cmap='Reds',
                                              align_keyword=align_keyword,
-                                             times=times, positions=positions)
+                                             times=times, positions=positions,
+                                             t0=times[0]*set.frame_int)
 
         kymo_outer_texas = kymograph.get_dat(kymos_data, 'kymo_c_outer_texas',
                                             'outer red',
@@ -132,7 +143,8 @@ def process_phase(set, label):
                                              1.,
                                              cmap='Reds',
                                              align_keyword=align_keyword,
-                                             times=times, positions=positions)
+                                             times=times, positions=positions,
+                                             t0=times[0]*set.frame_int)
 
 
         if set.analyse_flow:
@@ -140,19 +152,23 @@ def process_phase(set, label):
                                         'flow x',
                                         set.frame_int,
                                         set.pixel_scaling,
-                                        1.,
+                                        set.pixel_scaling/set.frame_int,
                                         cmap='Spectral',
+                                        unit=r'$\mu$m/s',
                                         align_keyword=align_keyword,
-                                        times=times, positions=positions)
+                                        times=times, positions=positions,
+                                        t0=times[0]*set.frame_int)
 
             flow_y =   kymograph.get_dat(kymos_data, 'kymo_flow_y',
                                         'flow y',
                                         set.frame_int,
                                         set.pixel_scaling,
-                                        1.,
+                                        set.pixel_scaling/0.06,
                                         cmap='Spectral',
+                                        unit=r'$\mu$m/s',
                                         align_keyword=align_keyword,
-                                        times=times, positions=positions)
+                                        times=times, positions=positions,
+                                        t0=times[0]*set.frame_int)
 
 
         print("Plotting raw...")
@@ -182,21 +198,32 @@ def process_phase(set, label):
 
 
 
-        if set.analyse_flow:
-            flow_x = flow_x.crop_kymo()
-            flow_x.color = 'lightgreen'
-
-            flow_y = flow_y.crop_kymo()
-            flow_y.color = 'darkgreen'
-
-
         print("Plotting cropped...")
         plot_kymograph([radii, conce, inner, outer], kymo_file)
 
 
         print("Plotting time_series...")
         plot_time_series([radii, conce, inner, outer], path0, kymo_file,
-                        window_size=50)
+                        window_size=50, figsize=(14,13))
+
+
+        if set.analyse_flow:
+            flow_x = flow_x.crop_kymo()
+            flow_x.color = 'lightgreen'
+
+            flow_y = flow_y.crop_kymo()
+            flow_y.color = 'darkgreen'
+            if np.var(flow_y.kymo) > np.var(flow_x.kymo):
+                sign = np.sign(flow_y.kymo)
+            else:
+                sign = np.sign(flow_x.kymo)
+
+            flow =flow_x.copy_meta( np.sqrt(flow_x.kymo**2+flow_y.kymo**2) \
+                                    *sign )
+            flow.name = 'flow'
+            flow.color = 'green'
+            plot_kymograph([flow], kymo_file)
+
 
         ##################################################################
         #################### Fourier spectrum  ###########################
@@ -205,7 +232,11 @@ def process_phase(set, label):
         freq_r = power_spec(radii, fourier_file, min_frequency, lowcut=0,
                             highcut=0.05, band=bandwidth,logscale=True)
         freq_c = power_spec(conce, fourier_file, min_frequency, lowcut=0,
-                            highcut=0.05, band=bandwidth,logscale=True)
+                            highcut=0.05, band=bandwidth, logscale=True)
+
+        _ = power_spec(radii, fourier_file, min_frequency, lowcut=0,
+                            highcut=0.05, band=None,logscale=True,
+                            mark_f=False)
         upd_out(to_save_dict, ('freq_r', freq_r), ('freq_c', freq_c) )
 
         ##################################################################
@@ -226,21 +257,26 @@ def process_phase(set, label):
                                         upsample_t=4,
                                         search_range_in_s=1./freq_r)
 
-        print('Correlation2d...')
-        correlation2d(radii_d, conce_d,
-                        shift_file, 'conce',
-                        upsample_x=1,
-                        upsample_t=4,
-                        search_range_in_s=1./freq_r)
-
         upd_out(to_save_dict, ('corr_shifts_c', corr_shifts_c) )
+
+        # print('Correlation2d...')
+        # correlation2d(radii_d, conce_d,
+        #                 shift_file, 'conce',
+        #                 upsample_x=1,
+        #                 upsample_t=4,
+        #                 search_range_in_s=1./freq_r)
+        #
 
 
         if set.analyse_flow:
-            flow_y_d = flow_y.detrend(tsig1=200, tsig2=10, psig1=1, psig2=5,
-                                        method = 'gauss')
-            corr_shift_f = correlation2d(conce_d, flow_y_d,
-                                        shift_file, 'flow-concentartion',
+            flow_x_d, flow_y_d, flow_d = \
+                [k.detrend(tsig1=200, tsig2=10, psig1=1, psig2=5,
+                method = 'gauss') for k in [flow_x, flow_y, flow]]
+
+            plot_kymograph([flow_x_d, flow_y_d, flow_d], kymo_file)
+
+            corr_shift_f = correlation2d(conce_d, flow_d,
+                                        shift_file, 'flow-concentration',
                                         upsample_t=2,
                                         upsample_x=1,
                                         search_range_in_s=1./freq_r)
@@ -248,15 +284,16 @@ def process_phase(set, label):
             upd_out(to_save_dict, ('corr_shift_f', corr_shift_f) )
 
 
-        print("Time shift map...")
-        time_shift_map = time_shift2d(radii_d, conce_d, shift_file, upsample_t=10,
-                            window_size_in_s=2./freq_r,
-                            t_sampling_in_s=2/freq_r,
-                            x_sampling=100, search_range_in_s=1./freq_r,
-                            detrend=None)
-
-        upd_out(to_save_dict, ('time_shift_map', time_shift_map), supr=True)
-
+        # print("Time shift map...")
+        # time_shift_map = time_shift2d(radii_d, conce_d, shift_file,
+        #                     upsample_t=10,
+        #                     window_size_in_s=2./freq_r,
+        #                     t_sampling_in_s=2/freq_r,
+        #                     x_sampling=100,
+        #                     search_range_in_s=1./freq_r,
+        #                     detrend=None)
+        #
+        # upd_out(to_save_dict, ('time_shift_map', time_shift_map), supr=True)
 
 
         ##################################################################
@@ -301,14 +338,15 @@ def process_phase(set, label):
         upd_out(to_save_dict, ('phase_shift_c', phase_shift_c) )
 
         if set.analyse_flow:
-            flow_x_b = flow_x.bandpass(band_f1, band_f2)
-            flow_y_b = flow_y.bandpass(band_f1, band_f2)
+            flow_x_b, flow_y_b, flow_b = \
+                [k.bandpass(band_f1, band_f2) for k in [flow_x, flow_y, flow]]
 
-            plot_kymograph([flow_x_b, flow_y_b], kymo_file)
+
+            plot_kymograph([flow_x_b, flow_y_b, flow_b], kymo_file)
 
             phase_shift_f = phase_average(phase_radius.kymo,
-                                        [radii, flow_x_b, flow_y_b],
-                                        kymo_file, 'flow', no_bins=20)
+                                        [radii_b, flow],
+                                        shift_file, 'flow', no_bins=20)
 
             upd_out(to_save_dict, ('phase_shift_f', phase_shift_f) )
 
